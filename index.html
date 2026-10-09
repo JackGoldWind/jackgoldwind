@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cargando…</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero">
+    <img id="avatar" class="avatar" alt="" hidden />
+    <h1 id="name"></h1>
+    <p id="bio" class="bio"></p>
+    <nav id="links" class="links"></nav>
+  </header>
+
+  <main>
+    <section id="calendar">
+      <h2>📅 Calendario de eventos</h2>
+      <div id="events" class="events"></div>
+    </section>
+
+    <section id="games">
+      <div class="section-head">
+        <h2>🎮 Lista de juegos jugados</h2>
+        <button id="suggest-btn" class="btn btn-accent">💡 Sugerir un juego</button>
+      </div>
+      <div class="toolbar">
+        <input id="game-search" type="search" placeholder="Buscar juego…" />
+        <select id="game-platform"><option value="">Todas las plataformas</option></select>
+      </div>
+      <div id="counters" class="counters"></div>
+      <div id="game-list" class="game-list"></div>
+      <button id="more-games" class="btn" hidden>Mostrar más</button>
+    </section>
+  </main>
+
+  <footer class="footer"><span id="updated"></span></footer>
+
+  <div id="suggest-modal" class="modal" hidden>
+    <div class="modal-box">
+      <button id="suggest-close" class="close" aria-label="Cerrar">✕</button>
+      <h3>💡 Sugerir un juego</h3>
+      <p class="muted">Se abrirá GitHub para enviar tu sugerencia (necesitas iniciar sesión ahí — así evitamos el spam). Máximo 5 sugerencias por día desde este navegador.</p>
+      <label for="sg-name">Nombre del juego</label>
+      <input id="sg-name" type="text" autocomplete="off" placeholder="Empieza a escribir…" />
+      <div id="sg-results" class="sg-results"></div>
+      <label for="sg-note">Nota (opcional)</label>
+      <textarea id="sg-note" rows="2" placeholder="¿Por qué crees que debería jugarlo?"></textarea>
+      <p id="sg-msg" class="muted"></p>
+      <button id="sg-send" class="btn btn-accent">Enviar sugerencia en GitHub</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
