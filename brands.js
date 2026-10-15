@@ -11,11 +11,12 @@
     [/whatsapp\.com$|(^|\.)wa\.me$/, "whatsapp"], [/steamcommunity\.com$|steampowered\.com$/, "steam"],
     [/github\.com$/, "github"], [/kick\.com$/, "kick"], [/bsky\.app$/, "bluesky"], [/threads\.net$/, "threads"],
     [/patreon\.com$/, "patreon"], [/ko-fi\.com$/, "kofi"], [/spotify\.com$/, "spotify"], [/reddit\.com$/, "reddit"],
-    [/snapchat\.com$/, "snapchat"], [/pinterest\./, "pinterest"], [/soundcloud\.com$/, "soundcloud"]
+    [/snapchat\.com$/, "snapchat"], [/pinterest\./, "pinterest"], [/soundcloud\.com$/, "soundcloud"],
+    [/^mail\.google\.com$|(^|\.)outlook\.(live|office)\.com$|^mail\.yahoo\.com$/, "mail"]
   ];
   function detectNetwork(url) {
     url = String(url || "").trim();
-    if (/^mailto:/i.test(url)) return "mail";
+    if (/^mailto:/i.test(url) || /^[^\s@\/]+@[^\s@\/]+\.[a-z]{2,}$/i.test(url)) return "mail";
     try {
       var h = new URL(url).hostname.toLowerCase();
       for (var i = 0; i < HOSTS.length; i++) if (HOSTS[i][0].test(h)) return HOSTS[i][1];
