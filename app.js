@@ -165,7 +165,7 @@
     const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
     const pad = (n) => String(n).padStart(2, "0");
-    if (d > 0) return `Comienza en ${d} d ${h} h ${m} min`;
+    if (d > 0) return `Comienza en ${d} d ${h} h ${pad(m)} min ${pad(sec)} s`;
     if (h > 0) return `Comienza en ${h} h ${pad(m)} min ${pad(sec)} s`;
     return `Comienza en ${pad(m)}:${pad(sec)}`;
   }
@@ -216,7 +216,8 @@
   function renderPlaying() {
     const label = data.playingLabel || "Jugando";
     const opts = data.options || {};
-    const list = (data.games || []).filter((g) => (g.estados || []).includes(label));
+    // del que empezaste a jugar más recientemente al más viejo
+    const list = (data.games || []).filter((g) => (g.estados || []).includes(label)).sort((a, b) => (b.playingSince || 0) - (a.playingSince || 0));
     const sec = $("#playing");
     if (!sec) return;
     sec.hidden = !list.length;
