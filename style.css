@@ -92,3 +92,9 @@ h2 { font-size:21px; margin:0 0 14px; }
 .pcard-body { padding:10px 12px; }
 .pcard-body b { display:block; margin-bottom:6px; }
 @media (max-width:640px) { .pcard { flex-basis:72vw; } }
+/* Cuenta regresiva y EN VIVO */
+.countdown { display:inline-flex; align-items:center; gap:6px; margin:6px 0 2px; padding:3px 10px; border-radius:999px; font-weight:700; font-size:13px; background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); font-variant-numeric:tabular-nums; }
+.countdown.is-live { background:#E0245E; color:#fff; letter-spacing:.04em; }
+.live-dot { width:9px; height:9px; border-radius:50%; background:#fff; animation:livepulse 1.2s ease-in-out infinite; }
+@keyframes livepulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.7); } }
+.event.event-live { outline:2px solid #E0245E; outline-offset:-2px; }

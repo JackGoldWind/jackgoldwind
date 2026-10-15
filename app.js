@@ -125,12 +125,13 @@
     const th = eventThumb(ev);
     const when = new Date(ev.startISO).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
     const el = document.createElement("div");
-    el.className = "event";
+    el.className = "event" + (ev.live ? " event-live" : "");
     el.innerHTML = `
       ${th ? `<img alt="" loading="lazy" src="${esc(th.src)}" />` : `<div class="ph">📺</div>`}
       <div class="body">
         <h3>${esc(ev.title)}</h3>
         <div class="when">${esc(when)}</div>
+        <div class="countdown ${ev.live ? "is-live" : ""}" data-start="${esc(ev.startISO)}" data-live="${ev.live ? 1 : ""}">${countdownText(ev)}</div>
         ${ev.description ? `<div class="desc">${esc(ev.description)}</div>` : ""}
         <div class="actions">
           ${ev.url ? `<a class="btn btn-accent" href="${esc(ev.url)}" target="_blank" rel="noopener noreferrer">Ver</a>` : ""}
@@ -152,12 +153,36 @@
     return el;
   }
 
+  /* Cuenta regresiva: "Comienza en 2 d 3 h" … "Comienza en 04:59" → "¡Comienza ahora!".
+     Si el panel detecta con OBS que ya estás transmitiendo, el evento llega con live:true → "🔴 EN VIVO". */
+  function countdownText(ev) {
+    if (ev.live) return `<span class="live-dot"></span> EN VIVO`;
+    let ms = new Date(ev.startISO).getTime() - Date.now();
+    if (ms <= 0) return "¡Comienza ahora!";
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const pad = (n) => String(n).padStart(2, "0");
+    if (d > 0) return `Comienza en ${d} d ${h} h ${m} min`;
+    if (h > 0) return `Comienza en ${h} h ${pad(m)} min ${pad(sec)} s`;
+    return `Comienza en ${pad(m)}:${pad(sec)}`;
+  }
+  setInterval(() => {
+    document.querySelectorAll(".countdown[data-start]").forEach((el) => {
+      if (el.dataset.live) return;
+      el.innerHTML = countdownText({ startISO: el.dataset.start });
+    });
+  }, 1000);
+
   // Solo se muestran los eventos que no han terminado: cuando pasan, desaparecen solos del sitio.
+  // Los que están EN VIVO se quedan hasta que el panel avisa que terminó la transmisión.
   function renderEvents() {
     const box = $("#events");
     const now = Date.now();
     const upcoming = (data.events || [])
-      .filter((e) => e.startISO && new Date(e.startISO).getTime() + (e.durationMin || 60) * 60000 >= now)
+      .filter((e) => e.startISO && (e.live || new Date(e.startISO).getTime() + (e.durationMin || 60) * 60000 >= now))
       .sort((a, b) => a.startISO.localeCompare(b.startISO));
     box.innerHTML = "";
     if (!upcoming.length) box.innerHTML = `<p class="muted">No hay eventos próximos por ahora.</p>`;
@@ -315,6 +340,22 @@
     $("#more-games").addEventListener("click", () => { state.shown += PAGE; renderGames(); });
     renderGames();
     setupSuggest();
+    // El sitio se refresca solo cada minuto (EN VIVO, eventos terminados, etiquetas de la lista)
+    setInterval(refreshData, 60000);
+  }
+
+  async function refreshData() {
+    try {
+      const res = await fetch("data.json?" + Date.now(), { cache: "no-store" });
+      const fresh = await res.json();
+      if (fresh.generatedAt === data.generatedAt) return;
+      data = fresh;
+      renderEvents();
+      renderPlaying();
+      renderGames();
+    } catch (e) {
+      /* sin red: se intenta en el siguiente minuto */
+    }
   }
 
   window.__site = { ytId, icsText, calendarLinks, eventThumb }; // para pruebas
