@@ -10,7 +10,7 @@
   const enc = encodeURIComponent;
   const PAGE = 40;
   let data = null;
-  const state = { search: "", platform: "", estado: "", shown: PAGE };
+  const state = { search: "", platform: "", estado: "", shown: PAGE, sort: "az" };
 
   /* ---------- Helpers de eventos / calendario ---------- */
 
@@ -66,9 +66,43 @@
 
   /* ---------- Render ---------- */
 
+  const DEFAULT_THEME = { bg: "#15202B", panel: "#1C2733", text: "#E7E9EA", accent: "#1D9BF0" };
+  // Solo se tocan las variables que el usuario cambió: sin cambios, el sitio se ve exactamente como el diseño original.
+  function applyTheme(t) {
+    t = t || {};
+    const r = document.documentElement.style;
+    if (t.bg && t.bg.toLowerCase() !== DEFAULT_THEME.bg.toLowerCase()) r.setProperty("--bg", t.bg);
+    if (t.panel && t.panel.toLowerCase() !== DEFAULT_THEME.panel.toLowerCase()) {
+      r.setProperty("--panel", t.panel);
+      r.setProperty("--panel2", "color-mix(in srgb, " + t.panel + " 88%, white 12%)");
+      r.setProperty("--line", "color-mix(in srgb, " + t.panel + " 70%, white 30%)");
+    }
+    if (t.text && t.text.toLowerCase() !== DEFAULT_THEME.text.toLowerCase()) {
+      r.setProperty("--text", t.text);
+      r.setProperty("--dim", "color-mix(in srgb, " + t.text + " 60%, transparent)");
+    }
+    if (t.accent && t.accent.toLowerCase() !== DEFAULT_THEME.accent.toLowerCase()) r.setProperty("--accent", t.accent);
+    if (t.font) r.setProperty("--font", t.font);
+    if (t.bgImage) {
+      const bg = $("#bg-layer");
+      bg.style.backgroundImage = "url('" + String(t.bgImage).replace(/'/g, "%27") + "')";
+      bg.style.opacity = String((t.bgOpacity == null ? 35 : t.bgOpacity) / 100);
+    }
+  }
+
+  function linkHtml(l) {
+    const B = window.SITE_BRANDS || { BRANDS: {}, detectNetwork: () => "link" };
+    const net = l.network || B.detectNetwork(l.url);
+    const brand = B.BRANDS[net] || { color: "#4C8C86" };
+    const icon = l.iconUrl || `icons/${net}.svg`;
+    return `<a class="lnk" style="--brand:${esc(brand.color)}" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.label)}"><img src="${esc(icon)}" alt="" /><span>${esc(l.label)}</span></a>`;
+  }
+
   function renderProfile() {
     const p = data.profile || {};
+    applyTheme(data.theme);
     document.title = p.name || "Mi canal";
+    if (p.icon) $("#favicon").href = p.icon;
     $("#name").textContent = p.name || "";
     $("#bio").textContent = p.bio || "";
     if (p.avatar) {
@@ -76,7 +110,13 @@
       a.src = p.avatar;
       a.hidden = false;
     }
-    $("#links").innerHTML = (data.links || []).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.icon || "")} ${esc(l.label)}</a>`).join("");
+    const nav = $("#links");
+    nav.className = "links style-" + (p.contactStyle || "pills");
+    nav.innerHTML = (data.links || []).map(linkHtml).join("");
+    const c = p.contact;
+    $("#contact").innerHTML = c && c.email
+      ? `<a class="btn btn-accent" href="mailto:${esc(c.email)}?subject=${enc(c.subject || "")}"><img src="icons/mail.svg" alt="" />${esc(c.label || "Contactar")}</a>`
+      : "";
     $("#updated").textContent = data.generatedAt ? `Actualizado: ${new Date(data.generatedAt).toLocaleDateString()}` : "";
   }
 
@@ -111,39 +151,39 @@
     return el;
   }
 
+  // Solo se muestran los eventos que no han terminado: cuando pasan, desaparecen solos del sitio.
   function renderEvents() {
     const box = $("#events");
     const now = Date.now();
-    const events = (data.events || []).filter((e) => e.startISO).sort((a, b) => a.startISO.localeCompare(b.startISO));
-    const upcoming = events.filter((e) => new Date(e.startISO).getTime() + (e.durationMin || 60) * 60000 >= now);
-    const past = events.filter((e) => !upcoming.includes(e)).reverse().slice(0, 6);
+    const upcoming = (data.events || [])
+      .filter((e) => e.startISO && new Date(e.startISO).getTime() + (e.durationMin || 60) * 60000 >= now)
+      .sort((a, b) => a.startISO.localeCompare(b.startISO));
     box.innerHTML = "";
     if (!upcoming.length) box.innerHTML = `<p class="muted">No hay eventos próximos por ahora.</p>`;
     upcoming.forEach((e) => box.appendChild(eventCard(e)));
-    if (past.length) {
-      const h = document.createElement("div");
-      h.className = "past-title";
-      h.style.gridColumn = "1/-1";
-      h.textContent = "Eventos pasados";
-      box.appendChild(h);
-      past.forEach((e) => box.appendChild(eventCard(e)));
-    }
     document.addEventListener("click", () => document.querySelectorAll(".cal-menu").forEach((m) => m.remove()));
   }
 
   const optColor = (list, name) => ((list || []).find((o) => o.name === name) || {}).color || "#78909C";
-  const textOn = (hex) => {
+  const optFg = (list, name) => ((list || []).find((o) => o.name === name) || {}).fg || "";
+  const textOn = (hex, fg) => {
+    if (fg) return fg;
     const h = (hex || "#888").replace("#", "");
     const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
     return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1a1a1a" : "#fff";
   };
-  const chip = (name, color) => `<span class="chip" style="background:${esc(color)};color:${textOn(color)}">${esc(name)}</span>`;
+  const chip = (name, color, fg) => `<span class="chip" style="background:${esc(color)};color:${esc(textOn(color, fg))}">${esc(name)}</span>`;
 
   function filteredGames() {
     const q = state.search.trim().toLowerCase();
     return (data.games || [])
       .filter((g) => (!q || g.name.toLowerCase().includes(q)) && (!state.platform || g.platform === state.platform) && (!state.estado || (g.estados || []).includes(state.estado)))
-      .sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base", numeric: true }));
+      .sort((a, b) => {
+        const byName = a.name.localeCompare(b.name, "es", { sensitivity: "base", numeric: true });
+        if (state.sort === "newest") return (b.addedAt || 0) - (a.addedAt || 0) || byName;
+        if (state.sort === "oldest") return (a.addedAt || 0) - (b.addedAt || 0) || byName;
+        return byName;
+      });
   }
 
   function renderGames() {
@@ -164,9 +204,9 @@
         <div>
           <h3>${esc(g.name)}</h3>
           <div class="chips">
-            ${g.platform ? chip(g.platform, optColor(opts.platforms, g.platform)) : ""}
-            ${(g.estados || []).map((e) => chip(e, optColor(opts.estados, e))).join("")}
-            ${g.rating ? chip(g.rating, optColor(opts.ratings, g.rating)) : ""}
+            ${g.platform ? chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform)) : ""}
+            ${(g.estados || []).map((e) => chip(e, optColor(opts.estados, e), optFg(opts.estados, e))).join("")}
+            ${g.rating ? chip(g.rating, optColor(opts.ratings, g.rating), optFg(opts.ratings, g.rating)) : ""}
           </div>
           ${g.notes ? `<div class="note">${esc(g.notes)}</div>` : ""}
         </div>
@@ -244,6 +284,12 @@
     $("#game-platform").innerHTML += plats.map((p) => `<option>${esc(p)}</option>`).join("");
     $("#game-search").addEventListener("input", (e) => { state.search = e.target.value; state.shown = PAGE; renderGames(); });
     $("#game-platform").addEventListener("change", (e) => { state.platform = e.target.value; state.shown = PAGE; renderGames(); });
+    document.querySelectorAll(".sort-btn").forEach((b) => b.addEventListener("click", () => {
+      state.sort = b.dataset.sort;
+      state.shown = PAGE;
+      document.querySelectorAll(".sort-btn").forEach((x) => x.classList.toggle("active", x === b));
+      renderGames();
+    }));
     $("#more-games").addEventListener("click", () => { state.shown += PAGE; renderGames(); });
     renderGames();
     setupSuggest();

@@ -4,14 +4,17 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cargando…</title>
+<link rel="icon" id="favicon" href="data:," />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="bg-layer"></div>
   <header class="hero">
     <img id="avatar" class="avatar" alt="" hidden />
     <h1 id="name"></h1>
     <p id="bio" class="bio"></p>
     <nav id="links" class="links"></nav>
+    <div id="contact" class="contact"></div>
   </header>
 
   <main>
@@ -22,12 +25,17 @@
 
     <section id="games">
       <div class="section-head">
-        <h2>🎮 Lista de juegos jugados</h2>
+        <h2>🎮 Lista de juegos</h2>
         <button id="suggest-btn" class="btn btn-accent">💡 Sugerir un juego</button>
       </div>
       <div class="toolbar">
         <input id="game-search" type="search" placeholder="Buscar juego…" />
         <select id="game-platform"><option value="">Todas las plataformas</option></select>
+        <div class="sortbtns" role="group" aria-label="Orden">
+          <button class="btn sort-btn active" data-sort="az">A-Z</button>
+          <button class="btn sort-btn" data-sort="newest">Más recientes ↓</button>
+          <button class="btn sort-btn" data-sort="oldest">Más antiguos ↑</button>
+        </div>
       </div>
       <div id="counters" class="counters"></div>
       <div id="game-list" class="game-list"></div>
@@ -52,6 +60,7 @@
     </div>
   </div>
 
+  <script src="brands.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
