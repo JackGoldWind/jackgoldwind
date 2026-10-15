@@ -95,7 +95,8 @@
     const net = l.network || B.detectNetwork(l.url);
     const brand = B.BRANDS[net] || { color: "#4C8C86" };
     const icon = l.iconUrl || `icons/${net}.svg`;
-    return `<a class="lnk" style="--brand:${esc(brand.color)}" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.label)}"><img src="${esc(icon)}" alt="" /><span>${esc(l.label)}</span></a>`;
+    const color = l.color || brand.color;
+    return `<a class="lnk${l.customIcon ? " lnk-custom" : ""}" style="--brand:${esc(color)}" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.label)}"><img src="${esc(icon)}" alt="" /><span>${esc(l.label)}</span></a>`;
   }
 
   function renderProfile() {
@@ -186,6 +187,26 @@
       });
   }
 
+  // Carrusel horizontal con los juegos etiquetados "Jugando" (o la etiqueta elegida en el panel)
+  function renderPlaying() {
+    const label = data.playingLabel || "Jugando";
+    const opts = data.options || {};
+    const list = (data.games || []).filter((g) => (g.estados || []).includes(label));
+    const sec = $("#playing");
+    if (!sec) return;
+    sec.hidden = !list.length;
+    $("#playing-track").innerHTML = list.map((g) => `
+      <div class="pcard">
+        ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" />` : `<div class="noimg">🎮</div>`}
+        <div class="pcard-body"><b>${esc(g.name)}</b>
+          ${g.platform ? `<div class="chips">${chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform))}</div>` : ""}</div>
+      </div>`).join("");
+    sec.querySelectorAll(".car-btn").forEach((b) => (b.onclick = () => {
+      const t = $("#playing-track");
+      t.scrollBy({ left: Number(b.dataset.dir) * Math.max(240, t.clientWidth * 0.8), behavior: "smooth" });
+    }));
+  }
+
   function renderGames() {
     const opts = data.options || {};
     const all = (data.games || []).filter((g) => (!state.search || g.name.toLowerCase().includes(state.search.toLowerCase())) && (!state.platform || g.platform === state.platform));
@@ -193,7 +214,7 @@
     all.forEach((g) => (g.estados || []).forEach((e) => (counts[e] = (counts[e] || 0) + 1)));
     $("#counters").innerHTML =
       `<button class="counter ${!state.estado ? "active" : ""}" data-e=""><b>${all.length}</b> Todos</button>` +
-      (opts.estados || []).map((e) => `<button class="counter ${state.estado === e.name ? "active" : ""}" data-e="${esc(e.name)}" style="--c:${esc(e.color)}"><b>${counts[e.name] || 0}</b> ${esc(e.name)}</button>`).join("");
+      (opts.estados || []).map((e) => `<button class="counter ${state.estado === e.name ? "active" : ""}" data-e="${esc(e.name)}" style="--c:${esc(e.color)};--cf:${esc(e.fg || "")}"><b>${counts[e.name] || 0}</b> ${esc(e.name)}</button>`).join("");
     document.querySelectorAll(".counter").forEach((b) => b.addEventListener("click", () => { state.estado = state.estado === b.dataset.e ? "" : b.dataset.e; state.shown = PAGE; renderGames(); }));
 
     const list = filteredGames();
@@ -280,6 +301,7 @@
     }
     renderProfile();
     renderEvents();
+    renderPlaying();
     const plats = [...new Set((data.games || []).map((g) => g.platform).filter(Boolean))].sort();
     $("#game-platform").innerHTML += plats.map((p) => `<option>${esc(p)}</option>`).join("");
     $("#game-search").addEventListener("input", (e) => { state.search = e.target.value; state.shown = PAGE; renderGames(); });
