@@ -98,3 +98,16 @@ h2 { font-size:21px; margin:0 0 14px; }
 .live-dot { width:9px; height:9px; border-radius:50%; background:#fff; animation:livepulse 1.2s ease-in-out infinite; }
 @keyframes livepulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.7); } }
 .event.event-live { outline:2px solid #E0245E; outline-offset:-2px; }
+/* Patrocinadores: columna derecha en pantallas anchas, abajo en el celular */
+.page-grid { display:block; }
+.sponsors { padding:0 16px 40px; display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); max-width:1100px; margin:0 auto; }
+.sponsors-title { grid-column:1 / -1; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted, #8b98a5); }
+.sponsor { display:block; border-radius:12px; overflow:hidden; background:var(--panel); border:1px solid var(--line, rgba(255,255,255,.08)); transition:transform .12s; }
+.sponsor:hover { transform:translateY(-2px); }
+.sponsor img { display:block; width:100%; height:auto; }
+@media (min-width:1280px) {
+  body.has-sponsors .page-grid { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:24px; max-width:1420px; margin:0 auto; padding-right:16px; }
+  body.has-sponsors .page-grid main { max-width:none; margin:0; }
+  body.has-sponsors .sponsors { display:flex; flex-direction:column; position:sticky; top:16px; align-self:start; padding:0; margin:0; max-height:calc(100vh - 32px); overflow-y:auto; }
+}
+@media (max-width:1279px) { .sponsors { grid-template-columns:repeat(auto-fill,minmax(200px,300px)); justify-content:center; } }

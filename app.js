@@ -99,6 +99,22 @@
     return `<a class="lnk${l.customIcon ? " lnk-custom" : ""}" style="--brand:${esc(color)}" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.label)}"><img src="${esc(icon)}" alt="" /><span>${esc(l.label)}</span></a>`;
   }
 
+  // Banners de patrocinadores (columna derecha; abajo en el celular)
+  function renderSponsors() {
+    const box = $("#sponsors");
+    if (!box) return;
+    const list = (data.sponsors || []).filter((x) => x.image);
+    box.hidden = !list.length;
+    document.body.classList.toggle("has-sponsors", !!list.length);
+    box.innerHTML = list.length
+      ? `<div class="sponsors-title">${esc(data.sponsorsTitle || "Patrocinadores")}</div>` +
+        list.map((x) => {
+          const img = `<img src="${esc(x.image)}" alt="${esc(x.name || "Patrocinador")}" loading="lazy" />`;
+          return x.url ? `<a class="sponsor" href="${esc(x.url)}" target="_blank" rel="sponsored noopener noreferrer" title="${esc(x.name || "")}">${img}</a>` : `<div class="sponsor">${img}</div>`;
+        }).join("")
+      : "";
+  }
+
   function renderProfile() {
     const p = data.profile || {};
     applyTheme(data.theme);
@@ -328,6 +344,7 @@
     renderProfile();
     renderEvents();
     renderPlaying();
+    renderSponsors();
     const plats = [...new Set((data.games || []).map((g) => g.platform).filter(Boolean))].sort();
     $("#game-platform").innerHTML += plats.map((p) => `<option>${esc(p)}</option>`).join("");
     $("#game-search").addEventListener("input", (e) => { state.search = e.target.value; state.shown = PAGE; renderGames(); });
@@ -353,6 +370,7 @@
       data = fresh;
       renderEvents();
       renderPlaying();
+      renderSponsors();
       renderGames();
     } catch (e) {
       /* sin red: se intenta en el siguiente minuto */
