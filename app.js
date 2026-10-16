@@ -23,7 +23,30 @@
     if (ev.image) return { src: ev.image, fallback: null };
     const id = ytId(ev.url);
     if (id) return { src: `https://img.youtube.com/vi/${id}/maxresdefault.jpg`, fallback: `https://img.youtube.com/vi/${id}/hqdefault.jpg` };
+    // solo Twitch y en vivo: la vista previa del directo
+    const tw = twitchChannel(ev.twitchUrl || ev.url);
+    if (tw && ev.live) return { src: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${tw.toLowerCase()}-640x360.jpg`, fallback: null };
     return null;
+  }
+  function twitchChannel(u) {
+    const m = String(u || "").match(/twitch\.tv\/([A-Za-z0-9_]+)/);
+    return m ? m[1] : "";
+  }
+  // Botones "Ver en YouTube" / "Ver en Twitch" (con su logo), o "Ver" para otros sitios
+  function watchButtons(ev) {
+    const out = [];
+    const add = (url) => {
+      if (!url) return;
+      const net = window.SITE_BRANDS ? window.SITE_BRANDS.detectNetwork(url) : "link";
+      const b = (window.SITE_BRANDS && window.SITE_BRANDS.BRANDS[net]) || null;
+      const label = net === "youtube" ? "YouTube" : net === "twitch" ? "Twitch" : net === "kick" ? "Kick" : "";
+      out.push(label
+        ? `<a class="btn btn-watch" style="--brand:${esc(b.color)}" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><img src="icons/${net}.svg" alt="" /> ${ev.live ? "Ver en vivo en" : "Ver en"} ${label}</a>`
+        : `<a class="btn btn-accent" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Ver</a>`);
+    };
+    add(ev.url);
+    if (ev.twitchUrl && ev.twitchUrl !== ev.url) add(ev.twitchUrl);
+    return out.join("");
   }
   const pad = (n) => String(n).padStart(2, "0");
   function fmtUTC(d) {
@@ -150,7 +173,7 @@
         <div class="countdown ${ev.live ? "is-live" : ""}" data-start="${esc(ev.startISO)}" data-live="${ev.live ? 1 : ""}">${countdownText(ev)}</div>
         ${ev.description ? `<div class="desc">${esc(ev.description)}</div>` : ""}
         <div class="actions">
-          ${ev.url ? `<a class="btn btn-accent" href="${esc(ev.url)}" target="_blank" rel="noopener noreferrer">Ver</a>` : ""}
+          ${watchButtons(ev)}
           <button class="btn" data-addcal>📅 Añadir a mi calendario</button>
         </div>
       </div>`;
