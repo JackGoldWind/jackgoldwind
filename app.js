@@ -106,11 +106,41 @@
     }
     if (t.accent && t.accent.toLowerCase() !== DEFAULT_THEME.accent.toLowerCase()) r.setProperty("--accent", t.accent);
     if (t.font) r.setProperty("--font", t.font);
+    // Temas inspirados en juegos (Ajustes → Sitio web → Tema): letra de títulos, segundo acento,
+    // textura de fondo, forma de las esquinas y versión renovada del diseño.
+    if (t.accent2) r.setProperty("--accent2", t.accent2);
+    const fams = [t.fontHead, t.fontBody].filter(Boolean);
+    if (fams.length) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?" + [...new Set(fams)].map((f) => "family=" + encodeURIComponent(f).replace(/%20/g, "+") + ":wght@400;600;700;800").join("&") + "&display=swap";
+      link.onerror = () => {};
+      document.head.appendChild(link);
+      if (t.fontHead) r.setProperty("--font-head", `"${t.fontHead}", ${t.font || "system-ui, sans-serif"}`);
+      if (t.fontBody && !t.font) r.setProperty("--font", `"${t.fontBody}", system-ui, sans-serif`);
+    }
+    const cl = document.body.classList;
+    if (t.motif && t.motif !== "none") cl.add("motif-" + t.motif);
+    if (t.shape) cl.add("shape-" + t.shape);
+    if (t.nova) {
+      cl.add("nova");
+      setupReveal();
+    }
+    if (t.light) cl.add("is-light");
     if (t.bgImage) {
       const bg = $("#bg-layer");
       bg.style.backgroundImage = "url('" + String(t.bgImage).replace(/'/g, "%27") + "')";
       bg.style.opacity = String((t.bgOpacity == null ? 35 : t.bgOpacity) / 100);
     }
+  }
+
+  // Versión renovada: las tarjetas aparecen suavemente al llegar a ellas (nada si pides menos movimiento)
+  function setupReveal() {
+    if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in-view"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
+    const scan = () => document.querySelectorAll(".event:not(.rv), .game:not(.rv), .pcard:not(.rv), section h2:not(.rv)").forEach((el, i) => { el.classList.add("rv"); el.style.setProperty("--rv-i", i % 6); io.observe(el); });
+    new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+    scan();
   }
 
   function linkHtml(l) {
