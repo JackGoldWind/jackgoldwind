@@ -102,7 +102,8 @@ h2 { font-size:21px; margin:0 0 14px; }
    columna a la derecha (con una columna vacía igual a la izquierda para no descentrar nada). */
 .page-grid { display:block; }
 .sponsors { padding:0 16px 40px; display:flex; flex-wrap:wrap; justify-content:center; gap:14px; max-width:1100px; margin:0 auto; }
-.sponsors-title { flex-basis:100%; text-align:center; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted, #8b98a5); }
+.sponsors-title { flex-basis:100%; text-align:center; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-family:var(--font-head); }
+.sponsors-title span { display:inline-block; }
 .sponsor { display:block; max-width:300px; background:none; border:none; }
 .sponsor img { display:block; max-width:100%; height:auto; }
 @media (min-width:1500px) {
@@ -169,3 +170,20 @@ body.nova .footer { padding:40px 24px 56px; }
   body.nova .hero > *:nth-child(2) { animation-delay:.06s; } body.nova .hero > *:nth-child(3) { animation-delay:.12s; } body.nova .hero > *:nth-child(4) { animation-delay:.18s; } body.nova .hero > *:nth-child(5) { animation-delay:.24s; }
 }
 @keyframes siteRise { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+
+/* ---- Marcos del título "Patrocinadores" (según el tema o el que elijas) ---- */
+.sponsors-title[class*="frame-"]:not(.frame-none) { color:var(--text); font-size:13px; }
+.sponsors-title.frame-line span { padding:0 14px; background:linear-gradient(var(--accent),var(--accent)) left center / 10px 2px no-repeat, linear-gradient(var(--accent),var(--accent)) right center / 10px 2px no-repeat; padding:0 18px; }
+.sponsors-title.frame-ornate span { position:relative; padding:6px 22px; border-top:1px solid var(--accent); border-bottom:1px solid var(--accent); }
+.sponsors-title.frame-ornate span::before, .sponsors-title.frame-ornate span::after { content:""; position:absolute; top:50%; width:7px; height:7px; border:1px solid var(--accent); background:var(--bg); transform:translateY(-50%) rotate(45deg); }
+.sponsors-title.frame-ornate span::before { left:-4px; } .sponsors-title.frame-ornate span::after { right:-4px; }
+.sponsors-title.frame-hud span { position:relative; padding:6px 16px; background:color-mix(in srgb, var(--accent) 10%, transparent); clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); border-left:3px solid var(--accent); }
+.sponsors-title.frame-pixel span { padding:6px 14px; background:var(--panel); border:3px solid var(--text); box-shadow:0 0 0 3px var(--panel), 4px 4px 0 3px rgba(0,0,0,.4); font-family:"Press Start 2P", var(--font-head); font-size:10px; letter-spacing:0; }
+.sponsors-title.frame-brush span { padding:6px 26px; color:#fff; background:radial-gradient(ellipse at center, var(--accent) 0 55%, transparent 72%); text-shadow:0 1px 2px rgba(0,0,0,.5); }
+.sponsors-title.frame-plate span { padding:6px 18px; background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 80%, white 20%), var(--panel)); border:1px solid var(--line); border-left:4px solid var(--accent); transform:skewX(-10deg); }
+.sponsors-title.frame-comic span { padding:5px 14px; background:#fff; color:#111; border:3px solid #111; border-radius:14px; box-shadow:4px 4px 0 var(--accent); font-weight:800; }
+.sponsors-title.frame-ribbon span { position:relative; padding:6px 22px; background:var(--accent); color:var(--on-accent, #fff); clip-path:polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%); font-weight:700; }
+.sponsors-title.frame-paper span { padding:6px 16px; background:#ece4d0; color:#2a2016; box-shadow:0 6px 16px rgba(0,0,0,.4); transform:rotate(-1.5deg); font-family:"Special Elite", var(--font-head); }
+.sponsors-title.frame-jrpg span { padding:6px 16px; background:linear-gradient(180deg, #2c56c9, #10227a); color:#fff; border:2px solid #e9efff; border-radius:6px; box-shadow:0 0 0 2px #0a1238; }
+.sponsors-title.frame-pill span { padding:6px 16px; border-radius:999px; background:color-mix(in srgb, var(--accent) 18%, var(--panel)); border:1px solid var(--accent); }
+.sponsors-title.frame-neon span { padding:6px 16px; border:2px solid var(--accent); border-radius:10px; color:#fff; box-shadow:0 0 10px var(--accent), inset 0 0 10px var(--accent); text-shadow:0 0 8px var(--accent); }

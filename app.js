@@ -135,7 +135,10 @@
   }
 
   // Versión renovada: las tarjetas aparecen suavemente al llegar a ellas (nada si pides menos movimiento)
+  let revealOn = false;
   function setupReveal() {
+    if (revealOn) return;
+    revealOn = true;
     if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in-view"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
     const scan = () => document.querySelectorAll(".event:not(.rv), .game:not(.rv), .pcard:not(.rv), section h2:not(.rv)").forEach((el, i) => { el.classList.add("rv"); el.style.setProperty("--rv-i", i % 6); io.observe(el); });
@@ -153,14 +156,31 @@
   }
 
   // Banners de patrocinadores (columna derecha; abajo en el celular)
+  // Marco del título "Patrocinadores": el elegido, o el que va con el tema del sitio
+  const KIT_FRAME = { yakuza: "brush", rpg: "jrpg", win: "jrpg", quest: "ornate", lol: "ornate", card: "ornate", hud: "hud", terminal: "hud", pixel: "pixel", nmh: "pixel", itemget: "pixel", fighter: "plate", race: "plate", sport: "plate", action: "plate", comic: "comic", cozy: "comic", poster: "ribbon", horror: "paper", cam: "hud", achieve: "pill" };
+  function sponsorFrame() {
+    const f = data.sponsorsFrame || "auto";
+    if (f !== "auto") return f;
+    const t = data.theme || {};
+    return KIT_FRAME[t.kit] || (t.preset ? "line" : "none");
+  }
   function renderSponsors() {
     const box = $("#sponsors");
     if (!box) return;
     const list = (data.sponsors || []).filter((x) => x.image);
     box.hidden = !list.length;
     document.body.classList.toggle("has-sponsors", !!list.length);
+    const fr = sponsorFrame();
+    const need = { pixel: "Press+Start+2P", paper: "Special+Elite" }[fr];
+    if (need && list.length && !document.querySelector(`link[data-frame-font="${fr}"]`)) {
+      const l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.dataset.frameFont = fr;
+      l.href = `https://fonts.googleapis.com/css2?family=${need}&display=swap`;
+      document.head.appendChild(l);
+    }
     box.innerHTML = list.length
-      ? `<div class="sponsors-title">${esc(data.sponsorsTitle || "Patrocinadores")}</div>` +
+      ? `<div class="sponsors-title frame-${esc(sponsorFrame())}"><span>${esc(data.sponsorsTitle || "Patrocinadores")}</span></div>` +
         list.map((x) => {
           const img = `<img src="${esc(x.image)}" alt="${esc(x.name || "Patrocinador")}" loading="lazy" />`;
           return x.url ? `<a class="sponsor" href="${esc(x.url)}" target="_blank" rel="sponsored noopener noreferrer" title="${esc(x.name || "")}">${img}</a>` : `<div class="sponsor">${img}</div>`;
@@ -386,7 +406,32 @@
 
   /* ---------- Arranque ---------- */
 
+  // Vista previa dentro del panel: los datos llegan por postMessage (sin publicar nada)
+  const PREVIEW = /[?&]preview\b/.test(location.search);
+  let started = false;
+  function rerender() {
+    document.documentElement.removeAttribute("style");
+    document.body.className = "";
+    const bg = $("#bg-layer");
+    if (bg) bg.removeAttribute("style");
+    renderProfile();
+    renderEvents();
+    renderPlaying();
+    renderSponsors();
+    renderGames();
+  }
   async function main() {
+    if (PREVIEW) {
+      window.addEventListener("message", (m) => {
+        const d = m.data || {};
+        if (d.site !== "data" || !d.data) return;
+        data = d.data;
+        if (!started) start();
+        else rerender();
+      });
+      parent.postMessage({ site: "ready" }, "*");
+      return;
+    }
     try {
       const res = await fetch("data.json?" + Date.now());
       data = await res.json();
@@ -394,6 +439,10 @@
       document.body.innerHTML = "<p style='padding:40px;text-align:center'>No se pudo cargar el sitio.</p>";
       return;
     }
+    start();
+  }
+  function start() {
+    started = true;
     renderProfile();
     renderEvents();
     renderPlaying();
@@ -412,7 +461,7 @@
     renderGames();
     setupSuggest();
     // El sitio se refresca solo cada minuto (EN VIVO, eventos terminados, etiquetas de la lista)
-    setInterval(refreshData, 60000);
+    if (!PREVIEW) setInterval(refreshData, 60000);
   }
 
   async function refreshData() {
