@@ -409,6 +409,45 @@
   // Vista previa dentro del panel: los datos llegan por postMessage (sin publicar nada)
   const PREVIEW = /[?&]preview\b/.test(location.search);
   let started = false;
+  // 🧩 Código propio: CSS extra y bloques de HTML (sin scripts)
+  function applyCode() {
+    const c = (data && data.code) || {};
+    let st = document.getElementById("custom-code-css");
+    if (!st) {
+      st = document.createElement("style");
+      st.id = "custom-code-css";
+      document.head.appendChild(st);
+    }
+    st.textContent = c.css || "";
+    const base = document.querySelector('link[href="style.css"]');
+    let own = document.getElementById("custom-own-style");
+    if (c.previewStyle) {
+      if (!own) {
+        own = document.createElement("style");
+        own.id = "custom-own-style";
+        document.head.insertBefore(own, st);
+      }
+      own.textContent = c.previewStyle;
+      if (base) base.disabled = true;
+    } else {
+      if (own) own.remove();
+      if (base) base.disabled = false;
+    }
+    const block = (id, html, place) => {
+      let el = document.getElementById(id);
+      if (!html) return el && el.remove();
+      if (!el) {
+        el = document.createElement("section");
+        el.id = id;
+        el.className = "custom-block";
+        place(el);
+      }
+      el.innerHTML = html;
+      el.querySelectorAll("script").forEach((s) => s.remove());
+    };
+    block("custom-top", c.top, (el) => { const h = document.querySelector("header.hero"); h ? h.after(el) : document.body.prepend(el); });
+    block("custom-bottom", c.bottom, (el) => { const f = document.querySelector("footer"); f ? f.before(el) : document.body.appendChild(el); });
+  }
   function rerender() {
     document.documentElement.removeAttribute("style");
     document.body.className = "";
@@ -419,6 +458,7 @@
     renderPlaying();
     renderSponsors();
     renderGames();
+    applyCode();
   }
   async function main() {
     if (PREVIEW) {
@@ -443,6 +483,7 @@
   }
   function start() {
     started = true;
+    applyCode();
     renderProfile();
     renderEvents();
     renderPlaying();

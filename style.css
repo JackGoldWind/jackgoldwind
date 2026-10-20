@@ -187,3 +187,6 @@ body.nova .footer { padding:40px 24px 56px; }
 .sponsors-title.frame-jrpg span { padding:6px 16px; background:linear-gradient(180deg, #2c56c9, #10227a); color:#fff; border:2px solid #e9efff; border-radius:6px; box-shadow:0 0 0 2px #0a1238; }
 .sponsors-title.frame-pill span { padding:6px 16px; border-radius:999px; background:color-mix(in srgb, var(--accent) 18%, var(--panel)); border:1px solid var(--accent); }
 .sponsors-title.frame-neon span { padding:6px 16px; border:2px solid var(--accent); border-radius:10px; color:#fff; box-shadow:0 0 10px var(--accent), inset 0 0 10px var(--accent); text-shadow:0 0 8px var(--accent); }
+
+/* v1.27 bloques propios */
+.custom-block { max-width: 1100px; margin: 18px auto; padding: 0 16px; }
