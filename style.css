@@ -229,3 +229,22 @@ body.nova .footer { padding:40px 24px 56px; }
 .most-bar span { display:block; height:100%; background:var(--accent); border-radius:99px; }
 .most-h { font-weight:800; font-size:16px; white-space:nowrap; }
 @media (max-width:640px) { .most { grid-template-columns:28px 90px 1fr; } .most img, .most .noimg { width:90px; } .most-h { grid-column:3; } }
+/* v1.55: 🕸 mis gustos dentro de la lista (con explicación y juegos de cada tipo) */
+#tastes-view .taste-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+#tastes-view .taste-card { grid-template-columns:minmax(260px, 1fr) minmax(220px, 1fr); align-items:center; gap:16px; justify-items:stretch; }
+@media (max-width:760px) { #tastes-view .taste-card { grid-template-columns:1fr; } }
+.taste-how h3 { margin:0 0 6px; font-size:16px; }
+.taste-how p { font-size:14px; line-height:1.5; margin:0 0 8px; }
+.taste-parts { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px; margin-top:12px; }
+.taste-part { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:8px 12px; }
+.taste-part summary { cursor:pointer; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.taste-part[open] { border-color:var(--accent); }
+.taste-part p { font-size:13px; margin:6px 0; }
+.taste-val { color:var(--accent); font-weight:700; font-size:13px; white-space:nowrap; }
+.taste-games { display:grid; gap:6px; margin-top:6px; }
+.taste-game { display:grid; grid-template-columns:72px 1fr; gap:8px; align-items:center; font-size:13px; }
+.taste-game img, .taste-game .noimg { width:72px; aspect-ratio:460/215; object-fit:cover; border-radius:4px; background:var(--panel2); display:flex; align-items:center; justify-content:center; }
+.taste-game small { color:var(--dim); }
+.score-txt { display:grid; gap:2px; }
+.score-note { font-size:13px; font-style:italic; color:var(--dim); }
+.sugby-also { color:var(--dim); font-size:12px; }

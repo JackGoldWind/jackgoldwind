@@ -41,20 +41,17 @@
       <div id="playing-track" class="carousel"></div>
     </section>
 
-    <section id="recent" hidden>
-      <div class="section-head"><h2>🕒 Jugado recientemente</h2></div>
-      <div id="recent-track" class="recent-track"></div>
-    </section>
-
     <section id="games">
       <div class="section-head">
         <h2 id="games-title">🎮 Lista de juegos</h2>
         <div class="games-head-btns">
-          <div id="gl-mode" class="gl-mode" role="tablist" hidden><button class="btn gl-btn active" data-gl="list" role="tab">🎮 Mi lista</button><button class="btn gl-btn" data-gl="most" role="tab">🏆 Más jugados</button></div>
+          <div id="gl-mode" class="gl-mode" role="tablist" hidden><button class="btn gl-btn active" data-gl="list" role="tab">🎮 Mi lista</button><button class="btn gl-btn" data-gl="recent" role="tab" hidden>🕒 Recientes</button><button class="btn gl-btn" data-gl="most" role="tab" hidden>🏆 Más jugados</button><button class="btn gl-btn" data-gl="tastes" role="tab" hidden>🕸 Mis gustos</button></div>
           <button id="suggest-btn" class="btn btn-accent">💡 Sugerir un juego</button>
         </div>
       </div>
       <div id="most-list" class="most-list" hidden></div>
+      <div id="recent-view" hidden><p class="muted">Los últimos juegos que jugué (aparte de mi lista).</p><div id="recent-track" class="recent-track"></div></div>
+      <div id="tastes-view" hidden></div>
       <div id="list-wrap">
       <div class="toolbar">
         <input id="game-search" type="search" placeholder="Buscar juego…" />

@@ -12,9 +12,15 @@
   let data = null;
   const state = { search: "", platform: "", estado: "", shown: PAGE, sort: "az", view: "list" };
   // ⭐ v1.54: calificación del 1 al 10 al estilo IGN (la misma escala que el panel)
-  const verdict = (v) => (v >= 10 ? "Obra maestra" : v >= 9 ? "Increíble" : v >= 8 ? "Genial" : v >= 7 ? "Bueno" : v >= 6 ? "Correcto" : v >= 5 ? "Mediocre" : v >= 4 ? "Malo" : v >= 3 ? "Horrible" : v >= 2 ? "Doloroso" : "Insufrible");
+  const WORDS = ["", "Insufrible", "Doloroso", "Horrible", "Malo", "Mediocre", "Correcto", "Bueno", "Genial", "Increíble", "Obra maestra"];
+  // v1.55: con los textos que eligió el dueño (p. ej. 10 = "Joder es cine")
+  const verdict = (v) => {
+    const i = Math.max(1, Math.min(10, Math.floor(v)));
+    const own = ((data && data.options) || {}).scoreWords;
+    return own && own[i] ? own[i] : WORDS[i];
+  };
   const scoreTxt = (v) => (Number(v) % 1 ? Number(v).toFixed(1) : String(Number(v)));
-  const scoreBadge = (v) => `<span class="score" title="Mi calificación: ${esc(scoreTxt(v))}/10"><span class="score-ring">${esc(scoreTxt(v))}</span><span class="score-word">${esc(verdict(Number(v)))}</span></span>`;
+  const scoreBadge = (v, note) => `<span class="score" title="Mi calificación: ${esc(scoreTxt(v))}/10"><span class="score-ring">${esc(scoreTxt(v))}</span><span class="score-txt"><span class="score-word">${esc(verdict(Number(v)))}</span>${note ? `<span class="score-note">“${esc(note)}”</span>` : ""}</span></span>`;
   const hoursTxt = (h) => (h >= 1 ? `${h % 1 ? h.toFixed(1) : h} h` : `${Math.max(1, Math.round(h * 60))} min`);
   const agoTxt = (t) => {
     const d = Math.floor((Date.now() - t) / 86400000);
@@ -334,10 +340,7 @@
   // 🕒 v1.54: los últimos juegos que jugué (Steam y RetroArch), aparte de la lista
   const noImg = `onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'🎮'}))"`;
   function renderRecent() {
-    const sec = $("#recent");
-    if (!sec) return;
     const list = data.recent || [];
-    sec.hidden = !list.length;
     $("#recent-track").innerHTML = list.map((g) => `
       <div class="rcard">
         ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<div class="noimg">🎮</div>`}
@@ -347,18 +350,8 @@
   // 🏆 v1.54: mis más jugados (ranking aparte: no se mezcla con la lista)
   function renderMost() {
     const most = data.mostPlayed || [];
-    const sw = $("#gl-mode");
-    if (!sw) return;
-    sw.hidden = !most.length;
-    if (!most.length) state.view = "list";
-    document.querySelectorAll(".gl-btn").forEach((b) => b.classList.toggle("active", b.dataset.gl === state.view));
-    $("#games-title").textContent = state.view === "most" ? "🏆 Mis juegos más jugados" : "🎮 Lista de juegos";
-    $("#list-wrap").hidden = state.view === "most";
-    const box = $("#most-list");
-    box.hidden = state.view !== "most";
-    if (state.view !== "most") return;
     const max = Math.max(...most.map((g) => g.hours || 0), 1);
-    box.innerHTML = most.map((g, i) => `
+    $("#most-list").innerHTML = most.map((g, i) => `
       <div class="most">
         <span class="most-n">${i + 1}</span>
         ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<div class="noimg">🎮</div>`}
@@ -367,8 +360,30 @@
         <span class="most-h">${esc(hoursTxt(g.hours || 0))}</span>
       </div>`).join("");
   }
+  // v1.55: la lista, 🕒 recientes, 🏆 más jugados y 🕸 mis gustos se ven con botones (uno a la vez)
+  const VIEWS = { list: "🎮 Lista de juegos", recent: "🕒 Jugado recientemente", most: "🏆 Mis juegos más jugados", tastes: "🕸 Mis tipos de juego" };
+  function renderViews() {
+    const sw = $("#gl-mode");
+    if (!sw) return;
+    const has = { list: true, recent: !!(data.recent || []).length, most: !!(data.mostPlayed || []).length, tastes: !!(data.tastes && (data.tastes.modes || []).length) };
+    if (!has[state.view]) state.view = "list";
+    sw.hidden = !(has.recent || has.most || has.tastes);
+    document.querySelectorAll(".gl-btn").forEach((b) => {
+      b.hidden = !has[b.dataset.gl];
+      b.classList.toggle("active", b.dataset.gl === state.view);
+      b.setAttribute("aria-selected", b.dataset.gl === state.view);
+    });
+    $("#games-title").textContent = VIEWS[state.view];
+    $("#list-wrap").hidden = state.view !== "list";
+    $("#most-list").hidden = state.view !== "most";
+    $("#recent-view").hidden = state.view !== "recent";
+    $("#tastes-view").hidden = state.view !== "tastes";
+    if (state.view === "most") renderMost();
+    if (state.view === "recent") renderRecent();
+    if (state.view === "tastes") renderTastes();
+  }
   function renderGames() {
-    renderMost();
+    renderViews();
     const opts = data.options || {};
     const all = (data.games || []).filter((g) => (!state.search || g.name.toLowerCase().includes(state.search.toLowerCase())) && (!state.platform || g.platform === state.platform));
     const counts = {};
@@ -391,9 +406,9 @@
             ${g.rating ? chip(g.rating, optColor(opts.ratings, g.rating), optFg(opts.ratings, g.rating)) : ""}
             ${g.hours ? `<span class="chip chip-hours" title="Horas jugadas">⏱ ${esc(hoursTxt(g.hours))}</span>` : ""}
           </div>
-          ${g.score != null ? scoreBadge(g.score) : ""}
+          ${g.score != null ? scoreBadge(g.score, g.scoreNote) : ""}
           ${g.notes ? `<div class="note">${esc(g.notes)}</div>` : ""}
-          ${g.by && g.by.u ? `<div class="sugby" title="Sugerido por ${esc(g.by.u)}">💡 Sugerido por ${["twitch", "youtube", "kick", "tiktok"].includes(g.by.p) ? `<img src="icons/${esc(g.by.p)}.svg" alt="${esc(g.by.p)}" />` : ""}<b>${esc(g.by.u)}</b></div>` : ""}
+          ${g.by && g.by.u ? `<div class="sugby" title="Sugerido por ${esc(g.by.u)}">💡 Sugerido por ${["twitch", "youtube", "kick", "tiktok"].includes(g.by.p) ? `<img src="icons/${esc(g.by.p)}.svg" alt="${esc(g.by.p)}" />` : ""}<b>${esc(g.by.u)}</b>${(g.by.also || []).length ? ` <span class="sugby-also" title="${esc(g.by.also.map((a) => a.u).join(", "))}">y ${g.by.also.length} ${g.by.also.length === 1 ? "persona" : "personas"} más (${esc(g.by.also.slice(0, 4).map((a) => a.u).join(", "))}${g.by.also.length > 4 ? "…" : ""})</span>` : ""}</div>` : ""}
         </div>
       </div>`).join("") || `<p class="muted">Ningún juego coincide.</p>`;
     $("#more-games").hidden = list.length <= state.shown;
@@ -516,28 +531,32 @@
   }
   async function renderTastes() {
     const t = data.tastes;
-    let sec = $("#tastes");
-    if (!t || !(t.modes || []).length) {
-      if (sec) sec.hidden = true;
-      return;
-    }
+    const sec = $("#tastes-view");
+    if (!sec || !t || !(t.modes || []).length) return;
     await loadRadar();
     if (!window.VGRadar) return;
-    if (!sec) {
-      sec = document.createElement("section");
-      sec.id = "tastes";
-      const games = $("#games");
-      games ? games.before(sec) : (document.querySelector("main") || document.body).appendChild(sec);
-    }
-    sec.hidden = false;
     if (!t.modes.includes(tasteMode)) tasteMode = t.modes.includes(t.def) ? t.def : t.modes[0];
-    const NAMES = { played: ["🕹️ Lo que más juego", "juegos de mi lista"], liked: ["❤️ Lo que me gusta", "juegos que elegí"] };
+    const NAMES = { played: ["🕹️ Lo que más juego", "juegos que he jugado", "Cuántos de mis juegos son de cada tipo (un juego puede ser de varios)."], liked: ["❤️ Lo que me gusta", "juegos que elegí", "De los juegos que elegí jugar, qué parte es de cada tipo."] };
     const d = t[tasteMode];
-    sec.innerHTML = `<div class="section-head"><h2>🕸️ Mis tipos de juego</h2>${t.modes.length > 1 ? `<div class="taste-tabs" role="tablist">${t.modes.map((m) => `<button class="btn taste-btn ${m === tasteMode ? "active" : ""}" role="tab" aria-selected="${m === tasteMode}" data-m="${m}">${NAMES[m][0]}</button>`).join("")}</div>` : `<span class="muted">${NAMES[tasteMode][0]}</span>`}</div>
-      <div class="taste-card"><div class="taste-svg">${window.VGRadar.svg(d.axes.map((a) => ({ label: a })), [{ values: d.values, labels: d.labels, color: "var(--accent)" }], { title: NAMES[tasteMode][0], size: 300 })}</div>
-      <p class="muted taste-note">Según ${d.n} ${NAMES[tasteMode][1]}.</p></div>`;
+    const det = d.details || [];
+    sec.innerHTML = `${t.modes.length > 1 ? `<div class="taste-tabs" role="tablist">${t.modes.map((m) => `<button class="btn taste-btn ${m === tasteMode ? "active" : ""}" role="tab" aria-selected="${m === tasteMode}" data-m="${m}">${NAMES[m][0]}</button>`).join("")}</div>` : ""}
+      <div class="taste-card">
+        <div class="taste-svg">${window.VGRadar.svg(d.axes.map((a) => ({ label: a })), [{ values: d.values, labels: d.labels, color: "var(--accent)" }], { title: NAMES[tasteMode][0], size: 300 })}</div>
+        <div class="taste-how">
+          <h3>¿Cómo se lee?</h3>
+          <p class="muted">Cada punta es un tipo de juego. Mientras más se estira la figura hacia una punta, más me gusta ese tipo. ${esc(NAMES[tasteMode][2])} Según ${d.n} ${NAMES[tasteMode][1]}.</p>
+          <p class="muted">Toca un tipo para ver qué es y qué juegos cuentan ahí.</p>
+        </div>
+      </div>
+      ${det.length ? `<div class="taste-parts">${det.map((x, i) => `
+        <details class="taste-part" ${i === 0 ? "open" : ""}>
+          <summary><b>${esc(x.label)}</b><span class="taste-val">${esc(x.value)}</span></summary>
+          ${x.desc ? `<p class="muted">${esc(x.desc)}</p>` : ""}
+          ${(x.games || []).length ? `<div class="taste-games">${x.games.map((g) => `<span class="taste-game" title="${esc(g.name)}">${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<span class="noimg">🎮</span>`}<span>${esc(g.name)}${g.hours ? ` <small>⏱ ${esc(hoursTxt(g.hours))}</small>` : ""}</span></span>`).join("")}</div>` : ""}
+        </details>`).join("")}</div>` : ""}`;
     sec.querySelectorAll(".taste-btn").forEach((b) => b.addEventListener("click", () => ((tasteMode = b.dataset.m), renderTastes())));
   }
+
 
   function rerender() {
     document.documentElement.removeAttribute("style");
@@ -547,8 +566,6 @@
     renderProfile();
     renderEvents();
     renderPlaying();
-    renderRecent();
-    renderTastes();
     renderSponsors();
     renderGames();
     applyCode();
@@ -580,8 +597,6 @@
     renderProfile();
     renderEvents();
     renderPlaying();
-    renderRecent();
-    renderTastes();
     renderSponsors();
     const plats = [...new Set((data.games || []).map((g) => g.platform).filter(Boolean))].sort();
     $("#game-platform").innerHTML += plats.map((p) => `<option>${esc(p)}</option>`).join("");
@@ -609,9 +624,7 @@
       data = fresh;
       renderEvents();
       renderPlaying();
-      renderRecent();
-      renderTastes();
-      renderSponsors();
+          renderSponsors();
       renderGames();
     } catch (e) {
       /* sin red: se intenta en el siguiente minuto */
