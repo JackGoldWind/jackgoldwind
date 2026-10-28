@@ -73,6 +73,9 @@
       <label for="sg-name">Nombre del juego</label>
       <input id="sg-name" type="text" autocomplete="off" placeholder="Empieza a escribir…" />
       <div id="sg-results" class="sg-results"></div>
+      <label for="sg-user">Tu usuario (opcional, sale junto al juego)</label>
+      <div class="sg-who"><input id="sg-user" type="text" maxlength="40" autocomplete="off" placeholder="Tu nombre en el chat" /><select id="sg-plat" aria-label="Plataforma"><option value="twitch">Twitch</option><option value="youtube">YouTube</option><option value="kick">Kick</option><option value="tiktok">TikTok</option><option value="web">Otra</option></select></div>
+      <p id="sg-cmd" class="muted" hidden></p>
       <label for="sg-note">Nota (opcional)</label>
       <textarea id="sg-note" rows="2" placeholder="¿Por qué crees que debería jugarlo?"></textarea>
       <p id="sg-msg" class="muted"></p>

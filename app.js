@@ -345,6 +345,7 @@
             ${g.rating ? chip(g.rating, optColor(opts.ratings, g.rating), optFg(opts.ratings, g.rating)) : ""}
           </div>
           ${g.notes ? `<div class="note">${esc(g.notes)}</div>` : ""}
+          ${g.by && g.by.u ? `<div class="sugby" title="Sugerido por ${esc(g.by.u)}">💡 Sugerido por ${["twitch", "youtube", "kick", "tiktok"].includes(g.by.p) ? `<img src="icons/${esc(g.by.p)}.svg" alt="${esc(g.by.p)}" />` : ""}<b>${esc(g.by.u)}</b></div>` : ""}
         </div>
       </div>`).join("") || `<p class="muted">Ningún juego coincide.</p>`;
     $("#more-games").hidden = list.length <= state.shown;
@@ -360,6 +361,9 @@
     const modal = $("#suggest-modal");
     const input = $("#sg-name");
     $("#suggest-btn").addEventListener("click", () => { modal.hidden = false; input.focus(); });
+    // v1.51: también se puede sugerir desde el chat del directo
+    const cmd = (data.suggest || {}).command;
+    if (cmd && $("#sg-cmd")) { $("#sg-cmd").hidden = false; $("#sg-cmd").textContent = `También puedes escribir ${cmd} nombre del juego en el chat cuando esté en directo.`; }
     $("#suggest-close").addEventListener("click", () => (modal.hidden = true));
     modal.addEventListener("click", (e) => { if (e.target === modal) modal.hidden = true; });
 
@@ -396,7 +400,9 @@
       const repo = (data.suggest || {}).repo;
       if (!repo) { msg.textContent = "Las sugerencias no están configuradas todavía."; return; }
       const note = $("#sg-note").value.trim();
-      const body = `**Juego:** ${name}\n${picked ? `**Steam:** https://store.steampowered.com/app/${picked.id}\n` : ""}${note ? `\n**Nota:** ${note}\n` : ""}\n<!-- panel-produccion-sugerencia appid=${picked ? picked.id : ""} -->`;
+      const who = $("#sg-user") ? $("#sg-user").value.trim().replace(/^@/, "").slice(0, 40) : "";
+      const plat = $("#sg-plat") ? $("#sg-plat").value : "";
+      const body = `**Juego:** ${name}\n${picked ? `**Steam:** https://store.steampowered.com/app/${picked.id}\n` : ""}${who ? `**Usuario:** ${who} (${plat})\n` : ""}${note ? `\n**Nota:** ${note}\n` : ""}\n<!-- panel-produccion-sugerencia appid=${picked ? picked.id : ""} user=${who ? enc(who) : ""} plat=${who ? plat : ""} -->`;
       const label = (data.suggest || {}).label || "sugerencia";
       try { localStorage.setItem(dayKey(), String(todayCount() + 1)); } catch (e) { /* sin localStorage: el límite es solo orientativo */ }
       window.open(`https://github.com/${repo}/issues/new?labels=${enc(label)}&title=${enc("Sugerencia: " + name)}&body=${enc(body)}`, "_blank", "noopener");
@@ -448,6 +454,43 @@
     block("custom-top", c.top, (el) => { const h = document.querySelector("header.hero"); h ? h.after(el) : document.body.prepend(el); });
     block("custom-bottom", c.bottom, (el) => { const f = document.querySelector("footer"); f ? f.before(el) : document.body.appendChild(el); });
   }
+  /* ---------- 🕸 v1.49: tipos de juego que me gustan / que más juego (si el dueño lo activa) ---------- */
+  let tasteMode = "";
+  function loadRadar() {
+    if (window.VGRadar) return Promise.resolve();
+    return new Promise((res) => {
+      const s = document.createElement("script");
+      s.src = "radar.js";
+      s.onload = res;
+      s.onerror = res;
+      document.head.appendChild(s);
+    });
+  }
+  async function renderTastes() {
+    const t = data.tastes;
+    let sec = $("#tastes");
+    if (!t || !(t.modes || []).length) {
+      if (sec) sec.hidden = true;
+      return;
+    }
+    await loadRadar();
+    if (!window.VGRadar) return;
+    if (!sec) {
+      sec = document.createElement("section");
+      sec.id = "tastes";
+      const games = $("#games");
+      games ? games.before(sec) : (document.querySelector("main") || document.body).appendChild(sec);
+    }
+    sec.hidden = false;
+    if (!t.modes.includes(tasteMode)) tasteMode = t.modes.includes(t.def) ? t.def : t.modes[0];
+    const NAMES = { played: ["🕹️ Lo que más juego", "juegos de mi lista"], liked: ["❤️ Lo que me gusta", "juegos que elegí"] };
+    const d = t[tasteMode];
+    sec.innerHTML = `<div class="section-head"><h2>🕸️ Mis tipos de juego</h2>${t.modes.length > 1 ? `<div class="taste-tabs" role="tablist">${t.modes.map((m) => `<button class="btn taste-btn ${m === tasteMode ? "active" : ""}" role="tab" aria-selected="${m === tasteMode}" data-m="${m}">${NAMES[m][0]}</button>`).join("")}</div>` : `<span class="muted">${NAMES[tasteMode][0]}</span>`}</div>
+      <div class="taste-card"><div class="taste-svg">${window.VGRadar.svg(d.axes.map((a) => ({ label: a })), [{ values: d.values, labels: d.labels, color: "var(--accent)" }], { title: NAMES[tasteMode][0], size: 300 })}</div>
+      <p class="muted taste-note">Según ${d.n} ${NAMES[tasteMode][1]}.</p></div>`;
+    sec.querySelectorAll(".taste-btn").forEach((b) => b.addEventListener("click", () => ((tasteMode = b.dataset.m), renderTastes())));
+  }
+
   function rerender() {
     document.documentElement.removeAttribute("style");
     document.body.className = "";
@@ -456,6 +499,7 @@
     renderProfile();
     renderEvents();
     renderPlaying();
+    renderTastes();
     renderSponsors();
     renderGames();
     applyCode();
@@ -487,6 +531,7 @@
     renderProfile();
     renderEvents();
     renderPlaying();
+    renderTastes();
     renderSponsors();
     const plats = [...new Set((data.games || []).map((g) => g.platform).filter(Boolean))].sort();
     $("#game-platform").innerHTML += plats.map((p) => `<option>${esc(p)}</option>`).join("");
@@ -513,6 +558,7 @@
       data = fresh;
       renderEvents();
       renderPlaying();
+      renderTastes();
       renderSponsors();
       renderGames();
     } catch (e) {
