@@ -41,11 +41,21 @@
       <div id="playing-track" class="carousel"></div>
     </section>
 
+    <section id="recent" hidden>
+      <div class="section-head"><h2>🕒 Jugado recientemente</h2></div>
+      <div id="recent-track" class="recent-track"></div>
+    </section>
+
     <section id="games">
       <div class="section-head">
-        <h2>🎮 Lista de juegos</h2>
-        <button id="suggest-btn" class="btn btn-accent">💡 Sugerir un juego</button>
+        <h2 id="games-title">🎮 Lista de juegos</h2>
+        <div class="games-head-btns">
+          <div id="gl-mode" class="gl-mode" role="tablist" hidden><button class="btn gl-btn active" data-gl="list" role="tab">🎮 Mi lista</button><button class="btn gl-btn" data-gl="most" role="tab">🏆 Más jugados</button></div>
+          <button id="suggest-btn" class="btn btn-accent">💡 Sugerir un juego</button>
+        </div>
       </div>
+      <div id="most-list" class="most-list" hidden></div>
+      <div id="list-wrap">
       <div class="toolbar">
         <input id="game-search" type="search" placeholder="Buscar juego…" />
         <select id="game-platform"><option value="">Todas las plataformas</option></select>
@@ -58,6 +68,7 @@
       <div id="counters" class="counters"></div>
       <div id="game-list" class="game-list"></div>
       <button id="more-games" class="btn" hidden>Mostrar más</button>
+      </div>
     </section>
   </main>
   <aside id="sponsors" class="sponsors" hidden aria-label="Patrocinadores"></aside>

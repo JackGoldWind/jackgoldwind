@@ -10,7 +10,16 @@
   const enc = encodeURIComponent;
   const PAGE = 40;
   let data = null;
-  const state = { search: "", platform: "", estado: "", shown: PAGE, sort: "az" };
+  const state = { search: "", platform: "", estado: "", shown: PAGE, sort: "az", view: "list" };
+  // ⭐ v1.54: calificación del 1 al 10 al estilo IGN (la misma escala que el panel)
+  const verdict = (v) => (v >= 10 ? "Obra maestra" : v >= 9 ? "Increíble" : v >= 8 ? "Genial" : v >= 7 ? "Bueno" : v >= 6 ? "Correcto" : v >= 5 ? "Mediocre" : v >= 4 ? "Malo" : v >= 3 ? "Horrible" : v >= 2 ? "Doloroso" : "Insufrible");
+  const scoreTxt = (v) => (Number(v) % 1 ? Number(v).toFixed(1) : String(Number(v)));
+  const scoreBadge = (v) => `<span class="score" title="Mi calificación: ${esc(scoreTxt(v))}/10"><span class="score-ring">${esc(scoreTxt(v))}</span><span class="score-word">${esc(verdict(Number(v)))}</span></span>`;
+  const hoursTxt = (h) => (h >= 1 ? `${h % 1 ? h.toFixed(1) : h} h` : `${Math.max(1, Math.round(h * 60))} min`);
+  const agoTxt = (t) => {
+    const d = Math.floor((Date.now() - t) / 86400000);
+    return d <= 0 ? "hoy" : d === 1 ? "ayer" : d < 30 ? `hace ${d} días` : new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+  };
 
   /* ---------- Helpers de eventos / calendario ---------- */
 
@@ -322,7 +331,44 @@
     }));
   }
 
+  // 🕒 v1.54: los últimos juegos que jugué (Steam y RetroArch), aparte de la lista
+  const noImg = `onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'🎮'}))"`;
+  function renderRecent() {
+    const sec = $("#recent");
+    if (!sec) return;
+    const list = data.recent || [];
+    sec.hidden = !list.length;
+    $("#recent-track").innerHTML = list.map((g) => `
+      <div class="rcard">
+        ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<div class="noimg">🎮</div>`}
+        <div class="rcard-body"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.platform || "")}${g.last ? " · " + esc(agoTxt(g.last)) : ""}</small>${g.hours ? `<small>⏱ ${esc(hoursTxt(g.hours))} en total</small>` : ""}</div>
+      </div>`).join("");
+  }
+  // 🏆 v1.54: mis más jugados (ranking aparte: no se mezcla con la lista)
+  function renderMost() {
+    const most = data.mostPlayed || [];
+    const sw = $("#gl-mode");
+    if (!sw) return;
+    sw.hidden = !most.length;
+    if (!most.length) state.view = "list";
+    document.querySelectorAll(".gl-btn").forEach((b) => b.classList.toggle("active", b.dataset.gl === state.view));
+    $("#games-title").textContent = state.view === "most" ? "🏆 Mis juegos más jugados" : "🎮 Lista de juegos";
+    $("#list-wrap").hidden = state.view === "most";
+    const box = $("#most-list");
+    box.hidden = state.view !== "most";
+    if (state.view !== "most") return;
+    const max = Math.max(...most.map((g) => g.hours || 0), 1);
+    box.innerHTML = most.map((g, i) => `
+      <div class="most">
+        <span class="most-n">${i + 1}</span>
+        ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<div class="noimg">🎮</div>`}
+        <div class="most-body"><b>${esc(g.name)}</b><small>${esc(g.platform || "")}${g.last ? " · última vez " + esc(agoTxt(g.last)) : ""}</small>
+          <div class="most-bar"><span style="width:${Math.max(4, Math.round(((g.hours || 0) / max) * 100))}%"></span></div></div>
+        <span class="most-h">${esc(hoursTxt(g.hours || 0))}</span>
+      </div>`).join("");
+  }
   function renderGames() {
+    renderMost();
     const opts = data.options || {};
     const all = (data.games || []).filter((g) => (!state.search || g.name.toLowerCase().includes(state.search.toLowerCase())) && (!state.platform || g.platform === state.platform));
     const counts = {};
@@ -343,7 +389,9 @@
             ${g.platform ? chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform)) : ""}
             ${(g.estados || []).map((e) => chip(e, optColor(opts.estados, e), optFg(opts.estados, e))).join("")}
             ${g.rating ? chip(g.rating, optColor(opts.ratings, g.rating), optFg(opts.ratings, g.rating)) : ""}
+            ${g.hours ? `<span class="chip chip-hours" title="Horas jugadas">⏱ ${esc(hoursTxt(g.hours))}</span>` : ""}
           </div>
+          ${g.score != null ? scoreBadge(g.score) : ""}
           ${g.notes ? `<div class="note">${esc(g.notes)}</div>` : ""}
           ${g.by && g.by.u ? `<div class="sugby" title="Sugerido por ${esc(g.by.u)}">💡 Sugerido por ${["twitch", "youtube", "kick", "tiktok"].includes(g.by.p) ? `<img src="icons/${esc(g.by.p)}.svg" alt="${esc(g.by.p)}" />` : ""}<b>${esc(g.by.u)}</b></div>` : ""}
         </div>
@@ -499,6 +547,7 @@
     renderProfile();
     renderEvents();
     renderPlaying();
+    renderRecent();
     renderTastes();
     renderSponsors();
     renderGames();
@@ -531,6 +580,7 @@
     renderProfile();
     renderEvents();
     renderPlaying();
+    renderRecent();
     renderTastes();
     renderSponsors();
     const plats = [...new Set((data.games || []).map((g) => g.platform).filter(Boolean))].sort();
@@ -544,6 +594,7 @@
       renderGames();
     }));
     $("#more-games").addEventListener("click", () => { state.shown += PAGE; renderGames(); });
+    document.querySelectorAll(".gl-btn").forEach((b) => b.addEventListener("click", () => { state.view = b.dataset.gl; renderGames(); }));
     renderGames();
     setupSuggest();
     // El sitio se refresca solo cada minuto (EN VIVO, eventos terminados, etiquetas de la lista)
@@ -558,6 +609,7 @@
       data = fresh;
       renderEvents();
       renderPlaying();
+      renderRecent();
       renderTastes();
       renderSponsors();
       renderGames();
