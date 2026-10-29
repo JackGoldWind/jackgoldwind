@@ -10,7 +10,7 @@
   const enc = encodeURIComponent;
   const PAGE = 40;
   let data = null;
-  const state = { search: "", platform: "", estado: "", shown: PAGE, sort: "az", view: "list" };
+  const state = { search: "", platform: "", estado: "", shown: PAGE, sort: "az", view: "list", recentSort: "date", recentLayout: "cards", mostPeriod: "", mostLayout: "list" };
   // ⭐ v1.54: calificación del 1 al 10 al estilo IGN (la misma escala que el panel)
   const WORDS = ["", "Insufrible", "Doloroso", "Horrible", "Malo", "Mediocre", "Correcto", "Bueno", "Genial", "Increíble", "Obra maestra"];
   // v1.55: con los textos que eligió el dueño (p. ej. 10 = "Joder es cine")
@@ -339,33 +339,59 @@
 
   // 🕒 v1.54: los últimos juegos que jugué (Steam y RetroArch), aparte de la lista
   const noImg = `onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'🎮'}))"`;
-  function renderRecent() {
-    const list = data.recent || [];
-    $("#recent-track").innerHTML = list.map((g) => `
+  // v1.57: recientes y más jugados en lista o en tarjetas, y ordenados como quieras
+  const card = (g, sub) => `
       <div class="rcard">
         ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<div class="noimg">🎮</div>`}
-        <div class="rcard-body"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.platform || "")}${g.last ? " · " + esc(agoTxt(g.last)) : ""}</small>${g.hours ? `<small>⏱ ${esc(hoursTxt(g.hours))} en total</small>` : ""}</div>
-      </div>`).join("");
-  }
-  // 🏆 v1.54: mis más jugados (ranking aparte: no se mezcla con la lista)
-  function renderMost() {
-    const most = data.mostPlayed || [];
-    const max = Math.max(...most.map((g) => g.hours || 0), 1);
-    $("#most-list").innerHTML = most.map((g, i) => `
+        <div class="rcard-body"><b title="${esc(g.name)}">${esc(g.name)}</b>${sub}</div>
+      </div>`;
+  const row = (g, i, max, sub, right) => `
       <div class="most">
         <span class="most-n">${i + 1}</span>
         ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<div class="noimg">🎮</div>`}
-        <div class="most-body"><b>${esc(g.name)}</b><small>${esc(g.platform || "")}${g.last ? " · última vez " + esc(agoTxt(g.last)) : ""}</small>
-          <div class="most-bar"><span style="width:${Math.max(4, Math.round(((g.hours || 0) / max) * 100))}%"></span></div></div>
-        <span class="most-h">${esc(hoursTxt(g.hours || 0))}</span>
-      </div>`).join("");
+        <div class="most-body"><b>${esc(g.name)}</b><small>${sub}</small>
+          ${max ? `<div class="most-bar"><span style="width:${Math.max(4, Math.round(((g.hours || 0) / max) * 100))}%"></span></div>` : ""}</div>
+        <span class="most-h">${right}</span>
+      </div>`;
+  const opts = (name, cur, list) => `<div class="view-opts" role="group">${list.map(([k, l]) => `<button class="btn vo-btn ${cur === k ? "active" : ""}" data-${name}="${k}">${l}</button>`).join("")}</div>`;
+  const LAYOUT = [["list", "☰ Lista"], ["cards", "▦ Tarjetas"]];
+  function renderRecent() {
+    const box = $("#recent-view");
+    const list = (data.recent || []).slice().sort((a, b) => (state.recentSort === "hours" ? (b.hours || 0) - (a.hours || 0) : (b.last || 0) - (a.last || 0)));
+    const sub = (g) => `${esc(g.platform || "")}${g.last ? " · " + esc(agoTxt(g.last)) : ""}`;
+    box.innerHTML = `<div class="view-bar"><p class="muted">Los últimos juegos que jugué (aparte de mi lista).</p><div class="view-tools">${opts("rs", state.recentSort, [["date", "🕒 Más reciente"], ["hours", "⏱ Más horas"]])}${opts("rl", state.recentLayout, LAYOUT)}</div></div>
+      ${state.recentLayout === "list" ? `<div class="most-list">${list.map((g, i) => row(g, i, 0, sub(g), g.hours ? esc(hoursTxt(g.hours)) : "")).join("")}</div>` : `<div class="recent-track">${list.map((g) => card(g, `<small>${sub(g)}</small>${g.hours ? `<small>⏱ ${esc(hoursTxt(g.hours))} en total</small>` : ""}`)).join("")}</div>`}`;
+    box.querySelectorAll("[data-rs]").forEach((b) => b.addEventListener("click", () => ((state.recentSort = b.dataset.rs), renderRecent())));
+    box.querySelectorAll("[data-rl]").forEach((b) => b.addEventListener("click", () => ((state.recentLayout = b.dataset.rl), renderRecent())));
+  }
+  const PERIODS = [["week", "🗓 Esta semana", "mostWeek"], ["month", "📅 Este mes", "mostMonth"], ["all", "♾ Siempre", "mostPlayed"]];
+  const periodData = (k) => {
+    const p = PERIODS.find((x) => x[0] === k);
+    const d = p && data[p[2]];
+    return Array.isArray(d) ? { list: d } : d || null;
+  };
+  // 🏆 mis más jugados (ranking aparte: no se mezcla con la lista)
+  function renderMost() {
+    const box = $("#most-list");
+    const avail = PERIODS.filter(([k]) => periodData(k) && periodData(k).list.length);
+    if (!avail.some(([k]) => k === state.mostPeriod)) state.mostPeriod = avail.some(([k]) => k === data.mostDefault) ? data.mostDefault : (avail[0] || ["all"])[0];
+    const pd = periodData(state.mostPeriod) || { list: [] };
+    const most = pd.list;
+    const max = Math.max(...most.map((g) => g.hours || 0), 1);
+    const inPeriod = state.mostPeriod !== "all";
+    const since = pd.since ? `desde el ${new Date(pd.since).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}` : "";
+    const sub = (g) => `${esc(g.platform || "")}${inPeriod && g.total ? ` · ${esc(hoursTxt(g.total))} en total` : g.last ? " · última vez " + esc(agoTxt(g.last)) : ""}`;
+    box.innerHTML = `<div class="view-bar"><div class="view-tools">${avail.length > 1 ? opts("mp", state.mostPeriod, avail.map(([k, l]) => [k, l])) : ""}${opts("ml", state.mostLayout, LAYOUT)}</div>${inPeriod && since ? `<p class="muted">Horas jugadas ${esc(since)}.</p>` : ""}</div>
+      ${state.mostLayout === "cards" ? `<div class="recent-track">${most.map((g, i) => card(g, `<small>#${i + 1} · ⏱ ${esc(hoursTxt(g.hours || 0))}${inPeriod ? "" : ""}</small><small>${sub(g)}</small>`)).join("")}</div>` : most.map((g, i) => row(g, i, max, sub(g), esc(hoursTxt(g.hours || 0)))).join("")}`;
+    box.querySelectorAll("[data-mp]").forEach((b) => b.addEventListener("click", () => ((state.mostPeriod = b.dataset.mp), renderMost())));
+    box.querySelectorAll("[data-ml]").forEach((b) => b.addEventListener("click", () => ((state.mostLayout = b.dataset.ml), renderMost())));
   }
   // v1.55: la lista, 🕒 recientes, 🏆 más jugados y 🕸 mis gustos se ven con botones (uno a la vez)
   const VIEWS = { list: "🎮 Lista de juegos", recent: "🕒 Jugado recientemente", most: "🏆 Mis juegos más jugados", tastes: "🕸 Mis tipos de juego" };
   function renderViews() {
     const sw = $("#gl-mode");
     if (!sw) return;
-    const has = { list: true, recent: !!(data.recent || []).length, most: !!(data.mostPlayed || []).length, tastes: !!(data.tastes && (data.tastes.modes || []).length) };
+    const has = { list: true, recent: !!(data.recent || []).length, most: !!((data.mostPlayed || []).length || (data.mostWeek && data.mostWeek.list.length) || (data.mostMonth && data.mostMonth.list.length)), tastes: !!(data.tastes && (data.tastes.modes || []).length) };
     if (!has[state.view]) state.view = "list";
     sw.hidden = !(has.recent || has.most || has.tastes);
     document.querySelectorAll(".gl-btn").forEach((b) => {
@@ -440,7 +466,7 @@
       timer = setTimeout(async () => {
         try {
           // Buscador público de Steam (no necesita clave). Si el navegador lo bloquea (CORS), se desactiva solo y queda un campo de texto normal.
-          const res = await fetch(`https://store.steampowered.com/api/storesearch/?term=${enc(term)}&cc=us&l=spanish`);
+          const res = await fetch(`https://store.steampowered.com/api/storesearch/?term=${enc(term)}&cc=mx&l=latam`);
           const json = await res.json();
           $("#sg-results").innerHTML = (json.items || []).slice(0, 6).map((it) => `<button type="button" data-id="${it.id}" data-name="${esc(it.name)}"><img alt="" src="${esc(it.tiny_image || "")}" />${esc(it.name)}</button>`).join("");
           $("#sg-results").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
@@ -545,15 +571,16 @@
         <div class="taste-how">
           <h3>¿Cómo se lee?</h3>
           <p class="muted">Cada punta es un tipo de juego. Mientras más se estira la figura hacia una punta, más me gusta ese tipo. ${esc(NAMES[tasteMode][2])} Según ${d.n} ${NAMES[tasteMode][1]}.</p>
-          <p class="muted">Toca un tipo para ver qué es y qué juegos cuentan ahí.</p>
+          <p class="muted">Abajo está cada tipo: qué es y qué juegos cuentan ahí.</p>
         </div>
       </div>
       ${det.length ? `<div class="taste-parts">${det.map((x, i) => `
-        <details class="taste-part" ${i === 0 ? "open" : ""}>
-          <summary><b>${esc(x.label)}</b><span class="taste-val">${esc(x.value)}</span></summary>
+        <div class="taste-part">
+          <div class="taste-head"><b>${esc(x.label)}</b><span class="taste-val">${esc(x.value)}</span></div>
           ${x.desc ? `<p class="muted">${esc(x.desc)}</p>` : ""}
           ${(x.games || []).length ? `<div class="taste-games">${x.games.map((g) => `<span class="taste-game" title="${esc(g.name)}">${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" ${noImg} />` : `<span class="noimg">🎮</span>`}<span>${esc(g.name)}${g.hours ? ` <small>⏱ ${esc(hoursTxt(g.hours))}</small>` : ""}</span></span>`).join("")}</div>` : ""}
-        </details>`).join("")}</div>` : ""}`;
+          ${x.more ? `<p class="muted taste-more">y ${x.more} más</p>` : ""}
+        </div>`).join("")}</div>` : ""}`;
     sec.querySelectorAll(".taste-btn").forEach((b) => b.addEventListener("click", () => ((tasteMode = b.dataset.m), renderTastes())));
   }
 

@@ -248,3 +248,15 @@ body.nova .footer { padding:40px 24px 56px; }
 .score-txt { display:grid; gap:2px; }
 .score-note { font-size:13px; font-style:italic; color:var(--dim); }
 .sugby-also { color:var(--dim); font-size:12px; }
+/* v1.57: portadas siempre horizontales en la lista (como en el panel), aunque la imagen sea vertical */
+.game img, .game .noimg { aspect-ratio:460/215; object-fit:cover; height:auto; }
+.taste-head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.taste-more { font-size:12px; margin:6px 0 0; }
+/* v1.57: opciones de recientes / más jugados */
+.view-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.view-bar p { margin:0; }
+.view-tools { display:flex; gap:10px; flex-wrap:wrap; }
+.view-opts { display:inline-flex; gap:4px; }
+.vo-btn { font-size:13px; padding:5px 10px; }
+.vo-btn.active { border-color:var(--accent); color:var(--accent); }
+#most-list > .most + .most { margin-top:8px; }
