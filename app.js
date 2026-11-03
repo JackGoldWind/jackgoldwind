@@ -36,7 +36,7 @@
       ? ""
       : `<div class="ach-row"><div class="ach-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${g.ach.t}" aria-valuenow="${g.ach.g}" title="${achPct(g.ach)}% de los logros"><span style="width:${achPct(g.ach)}%"></span></div><span class="ach-n">🏆 <b>${g.ach.g}</b>/${g.ach.t}</span><button type="button" class="btn ach-btn" data-ach="${esc(g.ach.id)}">Ver logros</button></div>`;
   let achData = null;
-  const ach = { id: "", filter: "all", q: "", world: true, back: null };
+  const ach = { id: "", filter: "all", q: "", grp: "", world: true, back: null };
   async function achDetail() {
     if (data.achDetail) return data.achDetail; // vista previa del panel
     if (!achData) achData = await (await fetch("achievements.json?" + enc(data.generatedAt || ""))).json();
@@ -59,7 +59,7 @@
         if (e.target === m || e.target.closest(".ach-x")) closeAch();
       });
     }
-    Object.assign(ach, { id, filter: "all", q: "", back: document.activeElement });
+    Object.assign(ach, { id, filter: "all", q: "", grp: "", back: document.activeElement });
     m.hidden = false;
     m.style.setProperty("--ach-bg", "none");
     document.documentElement.classList.add("ach-open");
@@ -77,6 +77,7 @@
       return;
     }
     const pct = achPct(g.ach);
+    const grps = [...new Set(d.l.map((x) => x.g).filter(Boolean))];
     const pts = d.l.reduce((a, x) => a + (x.pts || 0), 0);
     const ptsGot = d.l.reduce((a, x) => a + (x.u ? x.pts || 0 : 0), 0);
     const src = d.s === "ra" ? "RetroAchievements" + (d.c ? " · " + esc(d.c) : "") : "Steam";
@@ -96,13 +97,14 @@
       <div class="ach-tools">
         <label class="ach-sw"><input type="checkbox" id="ach-world" ${ach.world ? "checked" : ""}/> Mostrar % de jugadores</label>
         <span class="ach-grow"></span>
+        ${grps.length > 1 ? `<select id="ach-grp"><option value="">Todos los juegos (${grps.length})</option>${grps.map((n) => `<option>${esc(n)}</option>`).join("")}</select>` : ""}
         <select id="ach-filter"><option value="all">Todos los logros</option><option value="got">Desbloqueados</option><option value="lock">Bloqueados</option></select>
         <input type="search" id="ach-q" placeholder="Buscar…" />
       </div>
       <div id="ach-list" class="ach-list"></div>`;
     const draw = () => {
       const q = ach.q.toLowerCase();
-      const hit = (x) => !q || ((x.h ? "" : x.n) + " " + (x.d || "")).toLowerCase().includes(q);
+      const hit = (x) => (!ach.grp || x.g === ach.grp) && (!q || ((x.h ? "" : x.n) + " " + (x.d || "")).toLowerCase().includes(q));
       const got = d.l.filter((x) => x.u && hit(x)).sort((a, b) => (b.u || 0) - (a.u || 0));
       const lock = d.l.filter((x) => !x.u && hit(x));
       const meta = (x) =>
@@ -112,7 +114,7 @@
         (ach.world && x.p ? `<span class="ach-world" title="Jugadores que lo tienen"><i style="width:${Math.min(100, x.p)}%"></i><em>${x.p}%</em></span>` : "");
       const item = (x) => `<div class="ach-item ${x.u ? "got" : "lock"}">
           ${x.i ? `<img loading="lazy" alt="" src="${esc(x.i)}" />` : `<div class="ach-noimg">🏆</div>`}
-          <div class="ach-txt"><b>${x.h ? "Logro oculto" : esc(x.n)}</b><span>${x.h ? "Sigue jugando para descubrirlo." : esc(x.d || "")}</span></div>
+          <div class="ach-txt"><b>${x.h ? "Logro oculto" : esc(x.n)}</b><span>${x.h ? "Sigue jugando para descubrirlo." : esc(x.d || "")}</span>${x.g && grps.length > 1 ? `<small class="ach-grp">🎮 ${esc(x.g)}</small>` : ""}</div>
           <div class="ach-meta">${meta(x)}</div>
         </div>`;
       const block = (title, arr) => `<h3 class="ach-sec">${title} (${arr.length})</h3>${arr.map(item).join("")}`;
@@ -120,6 +122,11 @@
     };
     $("#ach-world").onchange = (e) => {
       ach.world = e.target.checked;
+      draw();
+    };
+    // v1.73.2: una colección (varios juegos de Steam): filtro por juego
+    if ($("#ach-grp")) $("#ach-grp").onchange = (e) => {
+      ach.grp = e.target.value;
       draw();
     };
     $("#ach-filter").onchange = (e) => {
