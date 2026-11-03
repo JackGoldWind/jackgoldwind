@@ -329,7 +329,7 @@
       <div class="pcard">
         ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" />` : `<div class="noimg">🎮</div>`}
         <div class="pcard-body"><b>${esc(g.name)}</b>
-          ${g.platform ? `<div class="chips">${chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform))}</div>` : ""}</div>
+          ${g.platform || g.hours ? `<div class="chips">${g.platform ? chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform)) : ""}${g.hours ? `<span class="chip chip-hours" title="Horas jugadas">⏱ ${esc(hoursTxt(g.hours))}</span>` : ""}</div>` : ""}</div>
       </div>`).join("");
     sec.querySelectorAll(".car-btn").forEach((b) => (b.onclick = () => {
       const t = $("#playing-track");
@@ -387,13 +387,13 @@
     box.querySelectorAll("[data-ml]").forEach((b) => b.addEventListener("click", () => ((state.mostLayout = b.dataset.ml), renderMost())));
   }
   // v1.55: la lista, 🕒 recientes, 🏆 más jugados y 🕸 mis gustos se ven con botones (uno a la vez)
-  const VIEWS = { list: "🎮 Lista de juegos", recent: "🕒 Jugado recientemente", most: "🏆 Mis juegos más jugados", tastes: "🕸 Mis tipos de juego" };
+  const VIEWS = { list: "🎮 Lista de juegos", recent: "🕒 Jugado recientemente", most: "🏆 Mis juegos más jugados", tastes: "🕸 Mis tipos de juego", media: "🎬 Anime, manga, series y películas" };
   function renderViews() {
     const sw = $("#gl-mode");
     if (!sw) return;
-    const has = { list: true, recent: !!(data.recent || []).length, most: !!((data.mostPlayed || []).length || (data.mostWeek && data.mostWeek.list.length) || (data.mostMonth && data.mostMonth.list.length)), tastes: !!(data.tastes && (data.tastes.modes || []).length) };
+    const has = { list: true, recent: !!(data.recent || []).length, most: !!((data.mostPlayed || []).length || (data.mostWeek && data.mostWeek.list.length) || (data.mostMonth && data.mostMonth.list.length)), tastes: !!(data.tastes && (data.tastes.modes || []).length), media: !!(data.media || []).length };
     if (!has[state.view]) state.view = "list";
-    sw.hidden = !(has.recent || has.most || has.tastes);
+    sw.hidden = !(has.recent || has.most || has.tastes || has.media);
     document.querySelectorAll(".gl-btn").forEach((b) => {
       b.hidden = !has[b.dataset.gl];
       b.classList.toggle("active", b.dataset.gl === state.view);
@@ -404,6 +404,10 @@
     $("#most-list").hidden = state.view !== "most";
     $("#recent-view").hidden = state.view !== "recent";
     $("#tastes-view").hidden = state.view !== "tastes";
+    if ($("#media-view")) $("#media-view").hidden = state.view !== "media";
+    // el botón de sugerir juegos no aplica en entretenimiento
+    if ($("#suggest-btn")) $("#suggest-btn").hidden = state.view === "media";
+    if (state.view === "media") renderMedia();
     if (state.view === "most") renderMost();
     if (state.view === "recent") renderRecent();
     if (state.view === "tastes") renderTastes();
@@ -555,6 +559,39 @@
       document.head.appendChild(s);
     });
   }
+  /* ---------- 🎬 v1.61: anime, manga, series y películas ---------- */
+  const MT = { anime: "📺 Anime", manga: "📖 Manga", serie: "🎞 Serie", pelicula: "🎬 Película" };
+  const MS = { viendo: "▶ Viendo", pendiente: "🕒 Pendiente", terminado: "✅ Visto", pausa: "⏸ En pausa", abandonado: "✕ Abandonado", sugerido: "💡 Sugerido" };
+  const mState = { type: "", status: "" };
+  function renderMedia() {
+    const sec = $("#media-view");
+    if (!sec) return;
+    const all = data.media || [];
+    const count = (k, v) => all.filter((x) => x[k] === v).length;
+    const order = { viendo: 0, pendiente: 1, sugerido: 2, pausa: 3, terminado: 4, abandonado: 5 };
+    const list = all.filter((x) => (!mState.type || x.type === mState.type) && (!mState.status || x.status === mState.status)).sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (b.at || 0) - (a.at || 0));
+    const st = (x) => (x.status === "viendo" && x.type === "manga" ? "▶ Leyendo" : x.status === "terminado" && x.type === "manga" ? "✅ Leído" : MS[x.status] || x.status);
+    sec.innerHTML = `<div class="media-filters">
+        <button class="counter ${!mState.type ? "active" : ""}" data-mt=""><b>${all.length}</b> Todo</button>
+        ${Object.entries(MT).filter(([k]) => count("type", k)).map(([k, l]) => `<button class="counter ${mState.type === k ? "active" : ""}" data-mt="${k}"><b>${count("type", k)}</b> ${l}</button>`).join("")}
+        <select id="media-st"><option value="">Cualquier estado</option>${Object.entries(MS).filter(([k]) => count("status", k)).map(([k, l]) => `<option value="${k}" ${mState.status === k ? "selected" : ""}>${l} (${count("status", k)})</option>`).join("")}</select>
+      </div>
+      <div class="media-grid">${list.map((x) => {
+        const pct = x.total ? Math.min(100, Math.round((x.progress / x.total) * 100)) : 0;
+        return `<article class="media-card">
+          ${x.image ? `<img loading="lazy" alt="" src="${esc(x.image)}" />` : `<div class="noimg">${esc((MT[x.type] || "🎬").split(" ")[0])}</div>`}
+          <div class="media-body"><b>${esc(x.title)}</b>${x.alt ? `<small>${esc(x.alt)}</small>` : ""}
+            <div class="chips"><span class="chip media-t-${esc(x.type)}">${esc(MT[x.type] || x.type)}</span><span class="chip">${esc(st(x))}</span>${x.score ? `<span class="chip">⭐ ${esc(x.score)}/10</span>` : ""}</div>
+            ${x.type !== "pelicula" && (x.progress || x.total) ? `<div class="media-prog"><span>${x.type === "manga" ? "Capítulo" : "Episodio"} ${esc(x.progress)}${x.total ? " de " + esc(x.total) : ""}</span><i style="--p:${pct}%"></i></div>` : ""}
+            ${x.note ? `<p class="media-note">💬 ${esc(x.note)}</p>` : ""}
+            ${x.by ? `<small class="media-by">💡 Sugerido por ${esc(x.by)}</small>` : ""}
+          </div></article>`;
+      }).join("") || `<p class="hint">Nada con ese filtro.</p>`}</div>`;
+    sec.querySelectorAll("[data-mt]").forEach((b) => b.addEventListener("click", () => ((mState.type = b.dataset.mt), renderMedia())));
+    const ms = sec.querySelector("#media-st");
+    if (ms) ms.addEventListener("change", (e) => ((mState.status = e.target.value), renderMedia()));
+  }
+
   async function renderTastes() {
     const t = data.tastes;
     const sec = $("#tastes-view");
