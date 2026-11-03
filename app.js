@@ -27,6 +27,123 @@
     return d <= 0 ? "hoy" : d === 1 ? "ayer" : d < 30 ? `hace ${d} días` : new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
   };
 
+  /* ---------- 🏆 v1.72: logros (Steam / RetroAchievements) ----------
+     En la lista: barra de avance, "10/50" y el botón 🏆 Ver logros. El detalle se abre encima de la página (no cambia
+     de página ni mueve lo que estabas viendo) y se carga de achievements.json solo la primera vez. */
+  const achPct = (a) => (a && a.t ? Math.round((a.g / a.t) * 100) : 0);
+  const achRow = (g) =>
+    !g.ach || !g.ach.t
+      ? ""
+      : `<div class="ach-row"><div class="ach-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${g.ach.t}" aria-valuenow="${g.ach.g}" title="${achPct(g.ach)}% de los logros"><span style="width:${achPct(g.ach)}%"></span></div><span class="ach-n">🏆 <b>${g.ach.g}</b>/${g.ach.t}</span><button type="button" class="btn ach-btn" data-ach="${esc(g.ach.id)}">Ver logros</button></div>`;
+  let achData = null;
+  const ach = { id: "", filter: "all", q: "", world: true, back: null };
+  async function achDetail() {
+    if (data.achDetail) return data.achDetail; // vista previa del panel
+    if (!achData) achData = await (await fetch("achievements.json?" + enc(data.generatedAt || ""))).json();
+    return achData;
+  }
+  const achDate = (t) => (t > 1 ? new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }) : "");
+  const achX = `<button type="button" class="ach-x" aria-label="Cerrar">✕</button>`;
+  async function openAch(id) {
+    const g = (data.games || []).find((x) => x.ach && x.ach.id === id);
+    if (!g) return;
+    let m = $("#ach-modal");
+    if (!m) {
+      m = document.createElement("div");
+      m.id = "ach-modal";
+      m.className = "ach-modal";
+      m.setAttribute("role", "dialog");
+      m.setAttribute("aria-modal", "true");
+      document.body.appendChild(m);
+      m.addEventListener("click", (e) => {
+        if (e.target === m || e.target.closest(".ach-x")) closeAch();
+      });
+    }
+    Object.assign(ach, { id, filter: "all", q: "", back: document.activeElement });
+    m.hidden = false;
+    document.documentElement.classList.add("ach-open");
+    m.innerHTML = `<div class="ach-box">${achX}<p class="muted ach-wait">Cargando logros…</p></div>`;
+    let d = null;
+    try {
+      d = (await achDetail())[id];
+    } catch (e) {
+      d = null;
+    }
+    if (ach.id !== id || m.hidden) return;
+    const box = m.querySelector(".ach-box");
+    if (!d) {
+      box.innerHTML = `${achX}<p class="muted ach-wait">No se pudieron cargar los logros.</p>`;
+      return;
+    }
+    const pct = achPct(g.ach);
+    const pts = d.l.reduce((a, x) => a + (x.pts || 0), 0);
+    const ptsGot = d.l.reduce((a, x) => a + (x.u ? x.pts || 0 : 0), 0);
+    const src = d.s === "ra" ? "RetroAchievements" + (d.c ? " · " + esc(d.c) : "") : "Steam";
+    box.innerHTML = `${achX}
+      <div class="ach-head">
+        ${g.image ? `<img alt="" src="${esc(g.image)}" />` : `<div class="noimg">🎮</div>`}
+        <div class="ach-head-txt">
+          <h2>${esc(g.name)}</h2>
+          <p class="muted">${src} · Logros: ${g.ach.g} de ${g.ach.t}${g.hours ? " · Tiempo de juego: " + esc(hoursTxt(g.hours)) : ""}${pts ? ` · ${ptsGot}/${pts} puntos` : ""}</p>
+          <div class="ach-prog"><div><b>${g.ach.g} de ${g.ach.t} logros desbloqueados</b> <span class="muted">(${pct}%)</span></div><div class="ach-bar big"><span style="width:${pct}%"></span></div></div>
+        </div>
+      </div>
+      <div class="ach-tools">
+        <label class="ach-sw"><input type="checkbox" id="ach-world" ${ach.world ? "checked" : ""}/> Mostrar % de jugadores</label>
+        <span class="ach-grow"></span>
+        <select id="ach-filter"><option value="all">Todos los logros</option><option value="got">Desbloqueados</option><option value="lock">Bloqueados</option></select>
+        <input type="search" id="ach-q" placeholder="Buscar…" />
+      </div>
+      <div id="ach-list" class="ach-list"></div>`;
+    const draw = () => {
+      const q = ach.q.toLowerCase();
+      const hit = (x) => !q || ((x.h ? "" : x.n) + " " + (x.d || "")).toLowerCase().includes(q);
+      const got = d.l.filter((x) => x.u && hit(x)).sort((a, b) => (b.u || 0) - (a.u || 0));
+      const lock = d.l.filter((x) => !x.u && hit(x));
+      const meta = (x) =>
+        (x.u ? `<span>✔ ${esc(achDate(x.u))}</span>` : "") +
+        (x.hc ? `<span class="ach-hc" title="Desbloqueado en modo hardcore">Hardcore</span>` : "") +
+        (x.pts ? `<span>${x.pts} pts</span>` : "") +
+        (ach.world && x.p ? `<span class="ach-world" title="Jugadores que lo tienen"><i style="width:${Math.min(100, x.p)}%"></i><em>${x.p}%</em></span>` : "");
+      const item = (x) => `<div class="ach-item ${x.u ? "got" : "lock"}">
+          ${x.i ? `<img loading="lazy" alt="" src="${esc(x.i)}" />` : `<div class="ach-noimg">🏆</div>`}
+          <div class="ach-txt"><b>${x.h ? "Logro oculto" : esc(x.n)}</b><span>${x.h ? "Sigue jugando para descubrirlo." : esc(x.d || "")}</span></div>
+          <div class="ach-meta">${meta(x)}</div>
+        </div>`;
+      const block = (title, arr) => `<h3 class="ach-sec">${title} (${arr.length})</h3>${arr.map(item).join("")}`;
+      $("#ach-list").innerHTML = (ach.filter !== "lock" ? block("Logros desbloqueados", got) : "") + (ach.filter !== "got" ? block("Logros bloqueados", lock) : "");
+    };
+    $("#ach-world").onchange = (e) => {
+      ach.world = e.target.checked;
+      draw();
+    };
+    $("#ach-filter").onchange = (e) => {
+      ach.filter = e.target.value;
+      draw();
+    };
+    $("#ach-q").oninput = (e) => {
+      ach.q = e.target.value;
+      draw();
+    };
+    draw();
+    box.querySelector(".ach-x").focus({ preventScroll: true });
+  }
+  function closeAch() {
+    const m = $("#ach-modal");
+    if (!m || m.hidden) return;
+    m.hidden = true;
+    ach.id = "";
+    document.documentElement.classList.remove("ach-open");
+    if (ach.back && ach.back.focus) ach.back.focus({ preventScroll: true }); // sigues donde te quedaste
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("[data-ach]");
+    if (b) openAch(b.dataset.ach);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAch();
+  });
+
   /* ---------- Helpers de eventos / calendario ---------- */
 
   function ytId(url) {
@@ -329,7 +446,7 @@
       <div class="pcard">
         ${g.image ? `<img loading="lazy" alt="" src="${esc(g.image)}" />` : `<div class="noimg">🎮</div>`}
         <div class="pcard-body"><b>${esc(g.name)}</b>
-          ${g.platform || g.hours ? `<div class="chips">${g.platform ? chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform)) : ""}${g.hours ? `<span class="chip chip-hours" title="Horas jugadas">⏱ ${esc(hoursTxt(g.hours))}</span>` : ""}</div>` : ""}</div>
+          ${g.platform || g.hours ? `<div class="chips">${g.platform ? chip(g.platform, optColor(opts.platforms, g.platform), optFg(opts.platforms, g.platform)) : ""}${g.hours ? `<span class="chip chip-hours" title="Horas jugadas">⏱ ${esc(hoursTxt(g.hours))}</span>` : ""}</div>` : ""}${achRow(g)}</div>
       </div>`).join("");
     sec.querySelectorAll(".car-btn").forEach((b) => (b.onclick = () => {
       const t = $("#playing-track");
@@ -436,6 +553,7 @@
             ${g.rating ? chip(g.rating, optColor(opts.ratings, g.rating), optFg(opts.ratings, g.rating)) : ""}
             ${g.hours ? `<span class="chip chip-hours" title="Horas jugadas">⏱ ${esc(hoursTxt(g.hours))}</span>` : ""}
           </div>
+          ${achRow(g)}
           ${g.score != null ? scoreBadge(g.score, g.scoreNote) : ""}
           ${g.notes ? `<div class="note">${esc(g.notes)}</div>` : ""}
           ${g.by && g.by.u ? `<div class="sugby" title="Sugerido por ${esc(g.by.u)}">💡 Sugerido por ${["twitch", "youtube", "kick", "tiktok"].includes(g.by.p) ? `<img src="icons/${esc(g.by.p)}.svg" alt="${esc(g.by.p)}" />` : ""}<b>${esc(g.by.u)}</b>${(g.by.also || []).length ? ` <span class="sugby-also" title="${esc(g.by.also.map((a) => a.u).join(", "))}">y ${g.by.also.length} ${g.by.also.length === 1 ? "persona" : "personas"} más (${esc(g.by.also.slice(0, 4).map((a) => a.u).join(", "))}${g.by.also.length > 4 ? "…" : ""})</span>` : ""}</div>` : ""}

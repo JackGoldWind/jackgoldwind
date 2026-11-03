@@ -272,3 +272,50 @@ body.nova .footer { padding:40px 24px 56px; }
 .media-prog { position:relative; font-size:12.5px; color:var(--dim); padding-bottom:6px; }
 .media-prog i { position:absolute; left:0; right:0; bottom:0; height:4px; border-radius:4px; background:linear-gradient(90deg, var(--accent, #f0b429) var(--p), var(--line) var(--p)); }
 .media-note { margin:0; font-size:13px; line-height:1.4; white-space:pre-line; }
+
+/* 🏆 v1.72: logros (Steam / RetroAchievements) */
+.ach-row { display:flex; align-items:center; gap:10px; margin:8px 0 4px; }
+.ach-bar { flex:1; min-width:60px; height:8px; border-radius:99px; background:var(--panel2); border:1px solid var(--line); overflow:hidden; }
+.ach-bar span { display:block; height:100%; background:linear-gradient(90deg,var(--accent),#7bd88f); border-radius:inherit; }
+.ach-bar.big { height:10px; margin-top:8px; }
+.ach-n { font-size:13px; color:var(--dim); white-space:nowrap; }
+.ach-n b { color:var(--text); display:inline; margin:0; }
+.ach-btn { padding:5px 10px; font-size:13px; white-space:nowrap; }
+.pcard .ach-row { flex-wrap:wrap; }
+.pcard .ach-bar { flex-basis:100%; }
+.pcard .ach-n { flex:1; }
+html.ach-open { overflow:hidden; }
+.ach-modal { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.65); backdrop-filter:blur(6px); display:flex; justify-content:center; align-items:flex-start; padding:24px 16px; overflow:auto; }
+.ach-modal[hidden] { display:none; }
+.ach-box { position:relative; width:min(900px,100%); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.ach-x { position:absolute; top:10px; right:10px; width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--panel2); color:var(--text); font-size:18px; cursor:pointer; }
+.ach-x:hover { border-color:var(--accent); }
+.ach-wait { padding:30px; text-align:center; }
+.ach-head { display:grid; grid-template-columns:150px 1fr; gap:18px; align-items:start; padding-right:40px; }
+.ach-head img, .ach-head .noimg { width:100%; border-radius:8px; display:block; background:var(--panel2); }
+.ach-head .noimg { aspect-ratio:2/3; display:flex; align-items:center; justify-content:center; font-size:34px; }
+.ach-head h2 { margin:0 0 4px; }
+.ach-prog { margin-top:12px; background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+.ach-tools { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:18px 0 8px; }
+.ach-grow { flex:1; }
+.ach-sw { display:flex; align-items:center; gap:6px; font-size:14px; color:var(--dim); cursor:pointer; }
+.ach-tools select, .ach-tools input[type=search] { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; font-size:14px; }
+.ach-sec { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); margin:18px 0 6px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+.ach-item { display:grid; grid-template-columns:56px 1fr auto; gap:12px; align-items:center; padding:10px 6px; border-bottom:1px solid var(--line); }
+.ach-item img, .ach-noimg { width:56px; height:56px; border-radius:6px; object-fit:cover; background:var(--panel2); display:flex; align-items:center; justify-content:center; }
+.ach-item.lock img { filter:grayscale(1); opacity:.75; }
+.ach-txt { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.ach-txt span { color:var(--dim); font-size:14px; }
+.ach-item.lock .ach-txt b { color:var(--dim); }
+.ach-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; font-size:12px; color:var(--dim); white-space:nowrap; }
+.ach-hc { color:#f5c451; font-weight:600; }
+.ach-world { position:relative; width:110px; height:18px; border-radius:4px; background:var(--panel2); overflow:hidden; display:block; }
+.ach-world i { position:absolute; inset:0 auto 0 0; background:rgba(29,155,240,.35); }
+.ach-world em { position:relative; font-style:normal; padding:0 6px; line-height:18px; color:var(--text); }
+@media (max-width:640px) {
+  .ach-head { grid-template-columns:90px 1fr; gap:12px; }
+  .ach-item { grid-template-columns:44px 1fr; }
+  .ach-item img, .ach-noimg { width:44px; height:44px; }
+  .ach-meta { grid-column:2; flex-direction:row; flex-wrap:wrap; align-items:center; }
+  .ach-box { padding:16px; }
+}
