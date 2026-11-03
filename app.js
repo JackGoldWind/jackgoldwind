@@ -61,6 +61,7 @@
     }
     Object.assign(ach, { id, filter: "all", q: "", back: document.activeElement });
     m.hidden = false;
+    m.style.setProperty("--ach-bg", "none");
     document.documentElement.classList.add("ach-open");
     m.innerHTML = `<div class="ach-box">${achX}<p class="muted ach-wait">Cargando logros…</p></div>`;
     let d = null;
@@ -79,9 +80,13 @@
     const pts = d.l.reduce((a, x) => a + (x.pts || 0), 0);
     const ptsGot = d.l.reduce((a, x) => a + (x.u ? x.pts || 0 : 0), 0);
     const src = d.s === "ra" ? "RetroAchievements" + (d.c ? " · " + esc(d.c) : "") : "Steam";
+    // fondo difuminado del juego (Steam: su imagen grande de la biblioteca; RetroAchievements: una captura)
+    const bg = d.bg || g.image || "";
+    m.style.setProperty("--ach-bg", bg ? `url("${String(bg).replace(/["\\\n]/g, "")}")` : "none");
+    const cover = d.cv || g.image;
     box.innerHTML = `${achX}
       <div class="ach-head">
-        ${g.image ? `<img alt="" src="${esc(g.image)}" />` : `<div class="noimg">🎮</div>`}
+        ${cover ? `<img alt="" ${d.cv ? `class="cv" ` : ""}src="${esc(cover)}" />` : `<div class="noimg">🎮</div>`}
         <div class="ach-head-txt">
           <h2>${esc(g.name)}</h2>
           <p class="muted">${src} · Logros: ${g.ach.g} de ${g.ach.t}${g.hours ? " · Tiempo de juego: " + esc(hoursTxt(g.hours)) : ""}${pts ? ` · ${ptsGot}/${pts} puntos` : ""}</p>

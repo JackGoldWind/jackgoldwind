@@ -319,3 +319,14 @@ html.ach-open { overflow:hidden; }
   .ach-meta { grid-column:2; flex-direction:row; flex-wrap:wrap; align-items:center; }
   .ach-box { padding:16px; }
 }
+/* v1.72.3: el fondo del juego va SOLO en el recuadro de arriba (portada, título y barra), difuminado; la zona de
+   los logros usa los colores del sitio. La página de atrás solo se oscurece y se difumina. */
+.ach-modal { overflow-x:hidden; }
+.ach-box { overflow:hidden; }
+.ach-head { position:relative; isolation:isolate; overflow:hidden; margin:-22px -22px 0; padding:22px 62px 22px 22px; border-bottom:1px solid var(--line); }
+.ach-head::before { content:""; position:absolute; inset:-24px; z-index:-1; background:var(--ach-bg,none) center 25%/cover no-repeat, var(--panel2); filter:blur(10px) brightness(.5) saturate(1.2); pointer-events:none; }
+.ach-list { background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:4px 14px 8px; }
+.ach-prog { background:rgba(0,0,0,.38); border-color:rgba(255,255,255,.08); }
+.ach-head h2, .ach-head .muted { text-shadow:0 1px 3px rgba(0,0,0,.6); }
+@media (max-width:640px) { .ach-head { margin:-16px -16px 0; padding:16px 54px 16px 16px; } }
+.ach-head img.cv { aspect-ratio:2/3; object-fit:cover; }
