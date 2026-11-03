@@ -331,3 +331,4 @@ html.ach-open { overflow:hidden; }
 @media (max-width:640px) { .ach-head { margin:-16px -16px 0; padding:16px 54px 16px 16px; } }
 .ach-head img.cv { aspect-ratio:2/3; object-fit:cover; }
 .ach-grp { color:var(--accent); font-size:12px; }
+.media-filters #media-q { flex:1; min-width:180px; max-width:340px; }

@@ -692,19 +692,33 @@
   /* ---------- 🎬 v1.61: anime, manga, series y películas ---------- */
   const MT = { anime: "📺 Anime", manga: "📖 Manga", serie: "🎞 Serie", pelicula: "🎬 Película" };
   const MS = { viendo: "▶ Viendo", pendiente: "🕒 Pendiente", terminado: "✅ Visto", pausa: "⏸ En pausa", abandonado: "✕ Abandonado", sugerido: "💡 Sugerido" };
-  const mState = { type: "", status: "" };
+  // v1.74: los estados son botones como los de arriba (se pueden prender varios). Por omisión “Viendo” y “Visto”;
+  // lo pendiente, en pausa, etc. lo enciende quien visita. Y un buscador.
+  const mState = { type: "", sts: null, q: "" };
+  try {
+    const saved = JSON.parse(localStorage.getItem("vg-media-sts") || "null");
+    if (Array.isArray(saved)) mState.sts = new Set(saved);
+  } catch (e) {}
   function renderMedia() {
     const sec = $("#media-view");
     if (!sec) return;
     const all = data.media || [];
     const count = (k, v) => all.filter((x) => x[k] === v).length;
     const order = { viendo: 0, pendiente: 1, sugerido: 2, pausa: 3, terminado: 4, abandonado: 5 };
-    const list = all.filter((x) => (!mState.type || x.type === mState.type) && (!mState.status || x.status === mState.status)).sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (b.at || 0) - (a.at || 0));
+    if (!mState.sts) {
+      mState.sts = new Set(["viendo", "terminado"].filter((k) => count("status", k)));
+      if (!mState.sts.size) mState.sts = new Set(Object.keys(MS)); // si no hay nada visto ni viéndose, todo
+    }
+    const qn = mState.q.trim().toLowerCase();
+    const list = all.filter((x) => (!mState.type || x.type === mState.type) && mState.sts.has(x.status) && (!qn || `${x.title} ${x.alt || ""}`.toLowerCase().includes(qn))).sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (b.at || 0) - (a.at || 0));
     const st = (x) => (x.status === "viendo" && x.type === "manga" ? "▶ Leyendo" : x.status === "terminado" && x.type === "manga" ? "✅ Leído" : MS[x.status] || x.status);
     sec.innerHTML = `<div class="media-filters">
         <button class="counter ${!mState.type ? "active" : ""}" data-mt=""><b>${all.length}</b> Todo</button>
         ${Object.entries(MT).filter(([k]) => count("type", k)).map(([k, l]) => `<button class="counter ${mState.type === k ? "active" : ""}" data-mt="${k}"><b>${count("type", k)}</b> ${l}</button>`).join("")}
-        <select id="media-st"><option value="">Cualquier estado</option>${Object.entries(MS).filter(([k]) => count("status", k)).map(([k, l]) => `<option value="${k}" ${mState.status === k ? "selected" : ""}>${l} (${count("status", k)})</option>`).join("")}</select>
+      </div>
+      <div class="media-filters toolbar">
+        ${Object.entries(MS).filter(([k]) => count("status", k)).map(([k, l]) => `<button class="counter ${mState.sts.has(k) ? "active" : ""}" data-ms="${k}" aria-pressed="${mState.sts.has(k)}"><b>${count("status", k)}</b> ${l}</button>`).join("")}
+        <input type="search" id="media-q" placeholder="Buscar anime, serie, película…" value="${esc(mState.q)}" />
       </div>
       <div class="media-grid">${list.map((x) => {
         const pct = x.total ? Math.min(100, Math.round((x.progress / x.total) * 100)) : 0;
@@ -716,10 +730,28 @@
             ${x.note ? `<p class="media-note">💬 ${esc(x.note)}</p>` : ""}
             ${x.by ? `<small class="media-by">💡 Sugerido por ${esc(x.by)}</small>` : ""}
           </div></article>`;
-      }).join("") || `<p class="hint">Nada con ese filtro.</p>`}</div>`;
+      }).join("") || `<p class="muted">${mState.sts.size ? "Nada con ese filtro." : "Enciende algún estado de arriba (▶ Viendo, ✅ Visto, 🕒 Pendiente…)."}</p>`}</div>`;
     sec.querySelectorAll("[data-mt]").forEach((b) => b.addEventListener("click", () => ((mState.type = b.dataset.mt), renderMedia())));
-    const ms = sec.querySelector("#media-st");
-    if (ms) ms.addEventListener("change", (e) => ((mState.status = e.target.value), renderMedia()));
+    sec.querySelectorAll("[data-ms]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const k = b.dataset.ms;
+        if (mState.sts.has(k)) mState.sts.delete(k);
+        else mState.sts.add(k);
+        try {
+          localStorage.setItem("vg-media-sts", JSON.stringify([...mState.sts]));
+        } catch (e) {}
+        renderMedia();
+      })
+    );
+    const mq = sec.querySelector("#media-q");
+    if (mq)
+      mq.addEventListener("input", (e) => {
+        mState.q = e.target.value;
+        const pos = e.target.selectionStart;
+        renderMedia();
+        const again = $("#media-q");
+        if (again) (again.focus(), again.setSelectionRange(pos, pos));
+      });
   }
 
   async function renderTastes() {
