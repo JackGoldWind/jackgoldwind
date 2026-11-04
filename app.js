@@ -699,18 +699,27 @@
     const saved = JSON.parse(localStorage.getItem("vg-media-sts") || "null");
     if (Array.isArray(saved)) mState.sts = new Set(saved);
   } catch (e) {}
+  function sagas(list) {
+    const byGroup = new Map();
+    list.forEach((x) => {
+      const k = x.group || x.title;
+      if (!byGroup.has(k)) byGroup.set(k, []);
+      byGroup.get(k).push(x);
+    });
+    return [...byGroup.entries()].flatMap(([k, items]) => (items.length > 1 ? [{ heading: k, n: items.length }, ...items.slice().sort((a, b) => (a.rank || 0) - (b.rank || 0))] : items));
+  }
   function renderMedia() {
     const sec = $("#media-view");
     if (!sec) return;
     const all = data.media || [];
-    const count = (k, v) => all.filter((x) => x[k] === v).length;
+    const count = (k, v) => all.filter((x) => x[k] === v || (k === "type" && x.also === v)).length;
     const order = { viendo: 0, pendiente: 1, sugerido: 2, pausa: 3, terminado: 4, abandonado: 5 };
     if (!mState.sts) {
       mState.sts = new Set(["viendo", "terminado"].filter((k) => count("status", k)));
       if (!mState.sts.size) mState.sts = new Set(Object.keys(MS)); // si no hay nada visto ni viéndose, todo
     }
     const qn = mState.q.trim().toLowerCase();
-    const list = all.filter((x) => (!mState.type || x.type === mState.type) && mState.sts.has(x.status) && (!qn || `${x.title} ${x.alt || ""}`.toLowerCase().includes(qn))).sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (b.at || 0) - (a.at || 0));
+    const list = all.filter((x) => (!mState.type || x.type === mState.type || x.also === mState.type) && mState.sts.has(x.status) && (!qn || `${x.title} ${x.alt || ""}`.toLowerCase().includes(qn))).sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (b.at || 0) - (a.at || 0));
     const st = (x) => (x.status === "viendo" && x.type === "manga" ? "▶ Leyendo" : x.status === "terminado" && x.type === "manga" ? "✅ Leído" : MS[x.status] || x.status);
     sec.innerHTML = `<div class="media-filters">
         <button class="counter ${!mState.type ? "active" : ""}" data-mt=""><b>${all.length}</b> Todo</button>
@@ -720,12 +729,14 @@
         ${Object.entries(MS).filter(([k]) => count("status", k)).map(([k, l]) => `<button class="counter ${mState.sts.has(k) ? "active" : ""}" data-ms="${k}" aria-pressed="${mState.sts.has(k)}"><b>${count("status", k)}</b> ${l}</button>`).join("")}
         <input type="search" id="media-q" placeholder="Buscar anime, serie, película…" value="${esc(mState.q)}" />
       </div>
-      <div class="media-grid">${list.map((x) => {
+      <div class="media-grid">${sagas(list).map((x) => {
+        // cada saga junta, con su título: sus temporadas en orden y al final sus películas
+        if (x.heading) return `<h4 class="media-group">${esc(x.heading)} <small>${esc(x.n)}</small></h4>`;
         const pct = x.total ? Math.min(100, Math.round((x.progress / x.total) * 100)) : 0;
         return `<article class="media-card">
           ${x.image ? `<img loading="lazy" alt="" src="${esc(x.image)}" />` : `<div class="noimg">${esc((MT[x.type] || "🎬").split(" ")[0])}</div>`}
           <div class="media-body"><b>${esc(x.title)}</b>${x.alt ? `<small>${esc(x.alt)}</small>` : ""}
-            <div class="chips"><span class="chip media-t-${esc(x.type)}">${esc(MT[x.type] || x.type)}</span><span class="chip">${esc(st(x))}</span>${x.score ? `<span class="chip">⭐ ${esc(x.score)}/10</span>` : ""}</div>
+            <div class="chips"><span class="chip media-t-${esc(x.type)}">${esc(MT[x.type] || x.type)}</span>${x.also && MT[x.also] ? `<span class="chip media-t-${esc(x.also)}">${esc(MT[x.also])}</span>` : ""}<span class="chip">${esc(st(x))}</span>${x.score ? `<span class="chip">⭐ ${esc(x.score)}/10</span>` : ""}</div>
             ${x.type !== "pelicula" && (x.progress || x.total) ? `<div class="media-prog"><span>${x.type === "manga" ? "Capítulo" : "Episodio"} ${esc(x.progress)}${x.total ? " de " + esc(x.total) : ""}</span><i style="--p:${pct}%"></i></div>` : ""}
             ${x.note ? `<p class="media-note">💬 ${esc(x.note)}</p>` : ""}
             ${x.by ? `<small class="media-by">💡 Sugerido por ${esc(x.by)}</small>` : ""}

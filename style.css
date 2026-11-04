@@ -332,3 +332,6 @@ html.ach-open { overflow:hidden; }
 .ach-head img.cv { aspect-ratio:2/3; object-fit:cover; }
 .ach-grp { color:var(--accent); font-size:12px; }
 .media-filters #media-q { flex:1; min-width:180px; max-width:340px; }
+
+.media-group { grid-column:1/-1; margin:10px 0 0; font-size:15px; border-bottom:1px solid var(--line, #333); padding-bottom:4px; }
+.media-group small { opacity:.65; font-weight:400; }
